@@ -1,6 +1,21 @@
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+builder.Services.AddSignalR();
+
 var app = builder.Build();
 
-app.MapGet("/", () => "Hello World!");
+if(app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(options => {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "v1");
+        options.RoutePrefix = string.Empty;
+    });
+}
 
+
+app.MapGet("/", () => "Hello World!");
+app.MapGet("/api/v1/health", () => new { Status = "Healthy" });
 app.Run();
