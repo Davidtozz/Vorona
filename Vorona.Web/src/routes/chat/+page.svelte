@@ -1,17 +1,24 @@
 <script lang="ts">
-    import {HubConnectionBuilder, LogLevel, HttpTransportType, HubConnection} from "@microsoft/signalr";
+    import {HubConnectionBuilder, LogLevel, HttpTransportType, HubConnection, MessageType} from "@microsoft/signalr";
     import {onMount} from "svelte";
     import MessageBubble from "$lib/MessageBubble.svelte";
 
     /** 
      * Contains all messages that have been sent and received.
      */
-    let messages: string[] = [];
+    //let history: string[] = [];
 
-    // name a variable containing both the user and the message sent
+    let history: Message[] = [];
 
-    let currentMessage: string = "";
+    /**
+     * The current message that is being typed.
+     */
+    let currentMessage: string;
 
+    /**
+     * The current user.
+     */
+    let currentUser: string = "";
     /**
      * The SignalR connection.
      */
@@ -35,7 +42,17 @@
         
         /* Event listeners */
         connection.on("ReceiveMessage", (user, message) => {
-            messages = [...messages, message];
+            history = [...history, {sender: user, content: message}];
+        });
+
+        connection.on("Connected", (generatedGuestName, cache) => {
+            console.log("Connected as " + generatedGuestName);
+            console.table(cache)
+            currentUser = generatedGuestName;
+        });
+
+        connection.on("Users", (cache) => {
+            console.table(cache);
         });
     });
 
@@ -44,8 +61,13 @@
      * Sends the current message to the server using SignalR.
      */
     function sendText(): void {
-        connection.invoke("SendMessage", currentMessage);
+
+        connection.invoke("SendMessage", currentUser, currentMessage);
         currentMessage = "";
+    }
+
+    function showHistory(): void {
+        console.table("History of messages: " + JSON.stringify(history));
     }
 </script>
 
@@ -53,9 +75,9 @@
 <div class="chatbox">
 
     <div class="chatbox-messages">
-        {#if messages.length > 0}
-            {#each messages as message}
-                <MessageBubble content={message}></MessageBubble>
+        {#if history.length > 0}
+            {#each history as message}
+                <MessageBubble content={message.content} sender={message.sender}></MessageBubble>
             {/each}
         {:else}
             <p>No messages yet.</p>
@@ -65,6 +87,8 @@
     <div class="chatFooter">
         <input bind:value={currentMessage} type="text" placeholder="Type your message here..." on:keydown={(e) => e.key === 'Enter' && sendText()}/>
         <button on:click={sendText}>Send</button>
+        <button on:click={showHistory}>Log history</button>
+        <button on:click={() => connection.invoke("FetchUsers")}>Log cache</button>
     </div>
 </div>
 

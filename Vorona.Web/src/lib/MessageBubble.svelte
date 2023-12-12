@@ -1,9 +1,11 @@
 <script lang="ts">
     export let content: string;
+    //TODO: add sender to message bubble
+    export let sender: string;
 </script>
 
 <div>
-    {content}
+   {sender}: {content}
 </div>
 
 <style>
@@ -12,7 +14,10 @@
 
     div {
         display: block;
-        text-align: center;
+        flex: 1;
+        padding: .2rem;
+        border: 1px solid black;
+        text-align: left;
         font-family: 'Roboto', sans-serif;
     }
 </style>
