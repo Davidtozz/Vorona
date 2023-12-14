@@ -15,7 +15,9 @@
     div {
         display: block;
         flex: 1;
-        padding: .2rem;
+        padding: .8rem;
+        background-color: rgb(234, 234, 234);
+        border-radius: 10px;
         border: 1px solid black;
         text-align: left;
         font-family: 'Roboto', sans-serif;

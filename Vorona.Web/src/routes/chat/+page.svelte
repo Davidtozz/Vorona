@@ -1,15 +1,12 @@
 <script lang="ts">
     import {HubConnectionBuilder, LogLevel, HttpTransportType, HubConnection} from "@microsoft/signalr";
     import {onMount} from "svelte";
-    import { usernameStore } from "$lib/index";
-    import UsernameModal from "$lib/UsernameModal.svelte";
-    import MessageBubble from "$lib/MessageBubble.svelte";
+    import { usernameStore, messageHistoryStore } from "$lib/stores";
+    import * as Handlers from "$lib/eventHandlers";
+    import UsernameModal from "$lib/components/UsernameModal.svelte";
+    import MessageBubble from "$lib/components/MessageBubble.svelte";
     import { page } from "$app/stores";
-
-    /** 
-     * Contains all messages that have been sent and received.
-     */
-    let history: Message[] = [];
+	import { writable, type Writable } from "svelte/store";
 
     /**
      * The current message that is being typed.
@@ -37,23 +34,10 @@
         }
         
         /* Event listeners */
-        connection.on("ReceiveMessage", (user, message) => {
-            history = [...history, {sender: user, content: message}];
-        });
-
-        connection.on("Connected", (generatedGuestName, connectedGuests) => {
-            
-            console.log("Connection started! Connected as: " + generatedGuestName);
-            console.table(connectedGuests)
-            
-        /*  currentUser = username; */
-        });
-
-        connection.on("Users", (users) => {
-            console.table(users)
-        });
+        connection.on("ReceiveMessage", Handlers.onReceiveMessage);
+        connection.on("Connected", Handlers.onConnectionEstablished);
+        connection.on("GetUsers", Handlers.onGetUsers);
     }   
-    
     /**
      * Sends the current message to the server using SignalR.
      */
@@ -64,49 +48,44 @@
     }
 
     function showHistory(): void {
-        console.table("History of messages: " + JSON.stringify(history));
+        console.table("History of messages: " + JSON.stringify(messageHistoryStore));
     }
 </script>
 
-
-
 <div class="chatbox">
-
     {#if $usernameStore === ""}
     <UsernameModal></UsernameModal>
     {/if}
-    <div class="chatbox-messages">
-        {#if history.length > 0}
-            {#each history as message}
+    {#if $messageHistoryStore.length > 0}
+        <div class="chatbox-messages">
+
+            {#each $messageHistoryStore as message}
                 <MessageBubble content={message.content} sender={message.sender}></MessageBubble>
             {/each}
-        {:else}
-            <p>No messages yet.</p>
-        {/if}
-    </div>
-
+        </div>
+    {:else}
+        <p>No messages yet.</p>
+        
+    
+    {/if}
     <div class="chatFooter">
         <input bind:value={currentMessage} type="text" placeholder="Type your message here..." on:keydown={(e) => e.key === 'Enter' && sendText()}/>
         <button on:click={sendText}>Send</button>
         
         <!-- DEBUG -->
-        <button on:click={showHistory}>Log history</button>
+        <!-- <button on:click={showHistory}>Log history</button>
         <button on:click={() => connection.invoke("FetchUsers")}>Log cache</button>
-        <button on:click={() => {$page.url.searchParams.set('username', $usernameStore); console.log($page.url.searchParams.get('username'))}}>Set query url</button>
+        <button on:click={() => {$page.url.searchParams.set('username', $usernameStore); console.log($page.url.searchParams.get('username'))}}>Set query url</button> -->
     </div>
-    
-
-    
 </div>
 
 <style>
-
-
     .chatbox {
         display: flex;
         justify-content: flex-end;
-        flex-direction: column;
         align-items: center;
+        flex-direction: column;
+        gap: 1rem;
         height: 100dvh;
         background-color: grey;
     }
@@ -118,6 +97,16 @@
       flex-direction: row;
       align-items: center;
       background-color: #fdfdfd;
+    }
+
+    .chatbox-messages {
+        display: flex;
+        flex-direction: column;
+        scroll-behavior: smooth;
+        padding: 1rem;
+        gap: .5rem;
+        
+        overflow-y: scroll;
     }
 
     input {
@@ -139,7 +128,21 @@
         font-family: 'Roboto';
     }
 
-    button:focus {
-        outline: none;
+    button:hover {
+        border: 5px solid black;
+        border-color: black;
+    }
+
+    p {
+        display: inline-block;
+        width: min-content;
+        white-space: nowrap;
+        overflow: hidden;
+        background-color: black;
+        padding: 1rem;
+        color: white;
+        font-size: 16px;
+        font-family: 'Roboto';
+        text-align: center;
     }
 </style>

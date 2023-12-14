@@ -31,7 +31,7 @@ public sealed class MessageHub : Hub
     public async Task SendMessage(string sender, string message)
     {
 
-        Console.WriteLine($"Received message from {sender}: {message}");
+        Console.WriteLine($"{DEBUG_PREFIX} Received message from {sender}: {message}");
         await Clients.All.SendAsync("ReceiveMessage", sender, message);
     }
 
@@ -66,7 +66,7 @@ public sealed class MessageHub : Hub
     //! Debug. Remove later
     public async Task FetchUsers()
     {
-        await Clients.Caller.SendAsync("Users", _userTracker.Users);
+        await Clients.Caller.SendAsync("GetUsers", _userTracker.Users);
     }
 
 

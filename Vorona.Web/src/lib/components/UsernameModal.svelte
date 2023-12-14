@@ -1,5 +1,5 @@
 <script lang="ts">
-import {usernameStore} from '$lib/index'
+import {usernameStore} from '$lib/stores'
 import {page} from '$app/stores'
 import { goto } from '$app/navigation';
 
@@ -19,7 +19,7 @@ function setUsername() {
 <dialog open>
 
     <form method="dialog" on:submit|preventDefault={setUsername}>
-        <label for="nickname">Nickname</label>
+        <label for="nickname">Enter nickname</label>
         <input type="text" name="nickname" id="nickname" placeholder="Nickname" bind:value={inputFieldValue} on:keydown={(e) => {e.key === 'Enter' && setUsername()}}>
         <button type="submit">Submit</button>
     </form>
@@ -51,7 +51,21 @@ function setUsername() {
         gap: 1rem;
         border-radius: 1rem;
 
+        & label {
+            font-size: 20px;
+            font-family: 'Roboto';
+        }
+
         & button {
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            border: none;
+            background-color: #f0f0f0;
+            font-size: 14px;
+            font-family: 'Roboto';
+        }
+
+        & input {
             padding: 0.5rem;
             border-radius: 0.5rem;
             border: none;
