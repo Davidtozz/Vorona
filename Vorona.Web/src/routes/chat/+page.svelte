@@ -1,13 +1,13 @@
 <script lang="ts">
-    import {HubConnectionBuilder, LogLevel, HttpTransportType, HubConnection, MessageType} from "@microsoft/signalr";
+    import {HubConnectionBuilder, LogLevel, HttpTransportType, HubConnection} from "@microsoft/signalr";
     import {onMount} from "svelte";
+    import { username } from "$lib/index";
+    import UsernameModal from "$lib/UsernameModal.svelte";
     import MessageBubble from "$lib/MessageBubble.svelte";
 
     /** 
      * Contains all messages that have been sent and received.
      */
-    //let history: string[] = [];
-
     let history: Message[] = [];
 
     /**
@@ -15,10 +15,6 @@
      */
     let currentMessage: string;
 
-    /**
-     * The current user.
-     */
-    let currentUser: string = "";
     /**
      * The SignalR connection.
      */
@@ -35,7 +31,6 @@
 
         try {
             connection.start()
-                .then(() => console.log("Connection started!"))
         } catch(err) {
             console.error(err)
         }
@@ -45,12 +40,15 @@
             history = [...history, {sender: user, content: message}];
         });
 
-        connection.on("Connected", (generatedGuestName, cache) => {
-            console.log("Connected as " + generatedGuestName);
-            console.table(cache)
-            currentUser = generatedGuestName;
+        connection.on("Connected", (generatedGuestName, connectedGuests) => {
+            
+            console.log("Connection started! Connected as: " + generatedGuestName);
+            console.table(connectedGuests)
+            
+        /*  currentUser = username; */
         });
 
+        //! DEBUG
         connection.on("Users", (cache) => {
             console.table(cache);
         });
@@ -61,8 +59,8 @@
      * Sends the current message to the server using SignalR.
      */
     function sendText(): void {
-
-        connection.invoke("SendMessage", currentUser, currentMessage);
+        if(currentMessage === "") return;
+        connection.invoke("SendMessage", $username, currentMessage);
         currentMessage = "";
     }
 
@@ -72,24 +70,32 @@
 </script>
 
 
+
 <div class="chatbox">
 
-    <div class="chatbox-messages">
-        {#if history.length > 0}
-            {#each history as message}
-                <MessageBubble content={message.content} sender={message.sender}></MessageBubble>
-            {/each}
-        {:else}
-            <p>No messages yet.</p>
-        {/if}
-    </div>
+    {#if $username === ""}
+    <UsernameModal></UsernameModal>
+    {/if}
+    
+        <div class="chatbox-messages">
+            {#if history.length > 0}
+                {#each history as message}
+                    <MessageBubble content={message.content} sender={message.sender}></MessageBubble>
+                {/each}
+            {:else}
+                <p>No messages yet.</p>
+            {/if}
+        </div>
 
-    <div class="chatFooter">
-        <input bind:value={currentMessage} type="text" placeholder="Type your message here..." on:keydown={(e) => e.key === 'Enter' && sendText()}/>
-        <button on:click={sendText}>Send</button>
-        <button on:click={showHistory}>Log history</button>
-        <button on:click={() => connection.invoke("FetchUsers")}>Log cache</button>
-    </div>
+        <div class="chatFooter">
+            <input bind:value={currentMessage} type="text" placeholder="Type your message here..." on:keydown={(e) => e.key === 'Enter' && sendText()}/>
+            <button on:click={sendText}>Send</button>
+            <button on:click={showHistory}>Log history</button>
+            <button on:click={() => connection.invoke("FetchUsers")}>Log cache</button>
+        </div>
+    
+
+    
 </div>
 
 <style>

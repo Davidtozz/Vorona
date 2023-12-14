@@ -10,6 +10,7 @@ builder.Services.AddSingleton<UserTracker>();
 
 var app = builder.Build();
 
+
 if(app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -17,10 +18,12 @@ if(app.Environment.IsDevelopment())
         options.SwaggerEndpoint("/swagger/v1/swagger.json", "v1");
         options.RoutePrefix = string.Empty;
     });
+    app.UseDeveloperExceptionPage();
 }
 
 
 app.MapGet("/", () => "Hello World!");
 app.MapGet("/api/v1/health", () => new { Status = "Healthy", Version = "v1", Environment = app.Environment.EnvironmentName });
+app.MapGet("/api/v1/users", (UserTracker userTracker) => userTracker.Users);
 app.MapHub<MessageHub>("/chat");
 app.Run();
