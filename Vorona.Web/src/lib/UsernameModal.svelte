@@ -1,8 +1,16 @@
 <script lang="ts">
-import {username} from '$lib/index'
-
+import {usernameStore} from '$lib/index'
+import {page} from '$app/stores'
+import { goto } from '$app/navigation';
 
 let inputFieldValue = ""
+
+function setUsername() {
+    usernameStore.set(inputFieldValue)
+    const url = new URL(window.location.href)
+    url.searchParams.set('username', inputFieldValue)
+    goto(url.toString())
+}
 
 </script>
 
@@ -10,10 +18,10 @@ let inputFieldValue = ""
 
 <dialog open>
 
-    <form method="dialog">
+    <form method="dialog" on:submit|preventDefault={setUsername}>
         <label for="nickname">Nickname</label>
-        <input type="text" name="nickname" id="nickname" placeholder="Nickname" bind:value={inputFieldValue} on:keydown={(e) => e.key === 'Enter' && username.set(inputFieldValue)}>
-        <button on:click={() => username.set(inputFieldValue)}>Submit</button>
+        <input type="text" name="nickname" id="nickname" placeholder="Nickname" bind:value={inputFieldValue} on:keydown={(e) => {e.key === 'Enter' && setUsername()}}>
+        <button type="submit">Submit</button>
     </form>
 
 </dialog>
@@ -48,7 +56,7 @@ let inputFieldValue = ""
             border-radius: 0.5rem;
             border: none;
             background-color: #f0f0f0;
-            font-size: 16px;
+            font-size: 14px;
             font-family: 'Roboto';
         }
     }

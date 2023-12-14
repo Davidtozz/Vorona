@@ -2,4 +2,4 @@
 
 import {writable, type Writable} from "svelte/store";
 
-export const username: Writable<string> = writable<string>("");
+export const usernameStore: Writable<string> = writable<string>("");

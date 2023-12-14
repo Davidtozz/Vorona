@@ -1,9 +1,10 @@
 <script lang="ts">
     import {HubConnectionBuilder, LogLevel, HttpTransportType, HubConnection} from "@microsoft/signalr";
     import {onMount} from "svelte";
-    import { username } from "$lib/index";
+    import { usernameStore } from "$lib/index";
     import UsernameModal from "$lib/UsernameModal.svelte";
     import MessageBubble from "$lib/MessageBubble.svelte";
+    import { page } from "$app/stores";
 
     /** 
      * Contains all messages that have been sent and received.
@@ -14,20 +15,20 @@
      * The current message that is being typed.
      */
     let currentMessage: string;
-
     /**
      * The SignalR connection.
      */
     let connection: HubConnection;
-    onMount(() => {
+    
+    $: if($usernameStore !== "") {
         connection = new HubConnectionBuilder()
-            .withUrl("http://localhost:5207/chat", {
-                skipNegotiation: true,
-                transport: HttpTransportType.WebSockets
-            })
-            .withAutomaticReconnect()
-            .configureLogging(LogLevel.Debug)
-            .build();
+        .withUrl(`http://localhost:5207/chat?username=${$usernameStore}`, {
+            skipNegotiation: true,
+            transport: HttpTransportType.WebSockets
+        })
+        .withAutomaticReconnect()
+        .configureLogging(LogLevel.Debug)
+        .build();
 
         try {
             connection.start()
@@ -48,19 +49,17 @@
         /*  currentUser = username; */
         });
 
-        //! DEBUG
-        connection.on("Users", (cache) => {
-            console.table(cache);
+        connection.on("Users", (users) => {
+            console.table(users)
         });
-    });
-
-
+    }   
+    
     /**
      * Sends the current message to the server using SignalR.
      */
     function sendText(): void {
         if(currentMessage === "") return;
-        connection.invoke("SendMessage", $username, currentMessage);
+        connection.invoke("SendMessage", $usernameStore, currentMessage);
         currentMessage = "";
     }
 
@@ -73,33 +72,35 @@
 
 <div class="chatbox">
 
-    {#if $username === ""}
+    {#if $usernameStore === ""}
     <UsernameModal></UsernameModal>
     {/if}
-    
-        <div class="chatbox-messages">
-            {#if history.length > 0}
-                {#each history as message}
-                    <MessageBubble content={message.content} sender={message.sender}></MessageBubble>
-                {/each}
-            {:else}
-                <p>No messages yet.</p>
-            {/if}
-        </div>
+    <div class="chatbox-messages">
+        {#if history.length > 0}
+            {#each history as message}
+                <MessageBubble content={message.content} sender={message.sender}></MessageBubble>
+            {/each}
+        {:else}
+            <p>No messages yet.</p>
+        {/if}
+    </div>
 
-        <div class="chatFooter">
-            <input bind:value={currentMessage} type="text" placeholder="Type your message here..." on:keydown={(e) => e.key === 'Enter' && sendText()}/>
-            <button on:click={sendText}>Send</button>
-            <button on:click={showHistory}>Log history</button>
-            <button on:click={() => connection.invoke("FetchUsers")}>Log cache</button>
-        </div>
+    <div class="chatFooter">
+        <input bind:value={currentMessage} type="text" placeholder="Type your message here..." on:keydown={(e) => e.key === 'Enter' && sendText()}/>
+        <button on:click={sendText}>Send</button>
+        
+        <!-- DEBUG -->
+        <button on:click={showHistory}>Log history</button>
+        <button on:click={() => connection.invoke("FetchUsers")}>Log cache</button>
+        <button on:click={() => {$page.url.searchParams.set('username', $usernameStore); console.log($page.url.searchParams.get('username'))}}>Set query url</button>
+    </div>
     
 
     
 </div>
 
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+
 
     .chatbox {
         display: flex;

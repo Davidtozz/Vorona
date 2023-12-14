@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Runtime.ConstrainedExecution;
 using Microsoft.AspNetCore.SignalR;
 using Vorona.Api.Services;
 
@@ -13,6 +14,7 @@ public sealed class MessageHub : Hub
     private readonly UserTracker _userTracker;
     private readonly Random random = new();
     private uint ConnectedClients = 0;
+    private const string DEBUG_PREFIX = "\x1b[31mdbug:\x1b[0m";
 
 
     public MessageHub(UserTracker userTracker)
@@ -37,11 +39,12 @@ public sealed class MessageHub : Hub
     {
         //TODO extract JWT from headers to identify user
         string connectionId = Context.ConnectionId;
+        string username = Context.GetHttpContext()?.Request.Query["username"]!;
         ConnectedClients++;
 
-        _userTracker.Users.TryAdd(connectionId, $"Guest{random.Next(0, 1000)}");
-        Console.WriteLine($"Client ({_userTracker.Users.GetValueOrDefault(connectionId, "(undefined)")}) connected. Current clients: {ConnectedClients}");
-        Console.WriteLine($"Users({_userTracker.Users.Count}): {string.Join(", ", _userTracker.Users.Select(x => $"{x.Key} => {x.Value}"))}");
+        _userTracker.Users.TryAdd(connectionId, username ?? $"Guest{random.Next(0, 1000)}");
+        Console.WriteLine($"{DEBUG_PREFIX} User {username} connected. Current clients: {ConnectedClients}");
+        Console.WriteLine($"{DEBUG_PREFIX} Users({_userTracker.Users.Count}): {string.Join(", ", _userTracker.Users.Select(x => $"{x.Key} => {x.Value}"))}");
 
         await Clients.Caller.SendAsync("Connected", _userTracker.Users[connectionId], _userTracker.Users);
         await base.OnConnectedAsync();
@@ -74,9 +77,7 @@ public sealed class MessageHub : Hub
     /// <returns>A task representing the asynchronous operation.</returns>
     /// <param name="message">The content of the message.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    public async Task ReceiveMessage(string user, string message)
-    {
-
+    public async Task ReceiveMessage(string user, string message) =>
         await Clients.All.SendAsync("ReceiveMessage", _userTracker.Users[user], message);
-    }
+    
 }
