@@ -34,6 +34,7 @@
 	},
 	"type": "module",
 	"dependencies": {
-		"@microsoft/signalr": "^8.0.0"
+		"@microsoft/signalr": "^8.0.0",
+		"jwt-decode": "^4.0.0"
 	}
 }

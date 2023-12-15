@@ -2,6 +2,8 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 
+namespace Vorona.Api.Extensions;
+
 public static class AuthenticationExtensions
 {
 
@@ -46,7 +48,7 @@ public static class AuthenticationExtensions
                 {
                     if (context.Exception.GetType() == typeof(SecurityTokenExpiredException))
                     {
-                        context.Response.Headers.Add("Token-Expired", "true");
+                        context.Response.Headers.Append("Token-Expired", "true");
                     }
                     return Task.CompletedTask;
                 }

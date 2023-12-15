@@ -8,14 +8,23 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Authorization;
+using Vorona.Api.Extensions;
 
-
-var builder = WebApplication.CreateBuilder(args);
+//! BREAKING CHANGE: Slim builder, less boilerplate
+var builder = WebApplication.CreateSlimBuilder(args);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<UserTracker>();
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.AllowAnyMethod().AllowAnyHeader().AllowCredentials().WithOrigins("http://localhost:5173");
+    });
+});
+
 
 //? Extension 
 builder.Services.ConfigureJwtAuthentication(configuration: builder.Configuration);
@@ -26,7 +35,10 @@ builder.WebHost.UseKestrel(options =>
 });
 
 
+
 var app = builder.Build();
+
+
 
 
 if (app.Environment.IsDevelopment())
@@ -40,20 +52,20 @@ if (app.Environment.IsDevelopment())
     app.UseDeveloperExceptionPage();
 }
 
-
+app.UseCors();
 
 app.MapGet("/", () => "Hello World!");
 app.MapGet("/api/v1/health", () => new { Status = "Healthy", Version = "v1", Environment = app.Environment.EnvironmentName });
 app.MapGet("/api/v1/users", (UserTracker userTracker) => userTracker.Users);
 
-app.MapGet("/api/v1/protected", () => "<h1>Hello World!</h1>")
+app.MapGet("/api/v1/protected", () => "Hello World!")
 .RequireAuthorization(
     new AuthorizeAttribute
     {
         AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme,
         Roles = "Admin"
     }
-);
+).Produces<string>(contentType: "text/plain");
 
 //? Bug: route not mapped in SwaggerUI
 app.MapGet("/api/v1/jwt", async (ctx) =>
@@ -65,24 +77,27 @@ app.MapGet("/api/v1/jwt", async (ctx) =>
     {
         Subject = new ClaimsIdentity(new Claim[]
         {
-            new(ClaimTypes.Name, "TestUser"),
+            new(ClaimTypes.Name, "TestUser"), //TODO: Replace with actual username
             new(ClaimTypes.Role, "Admin")
         }),
         Expires = DateTime.UtcNow.AddMinutes(5),
-        SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+        SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature),
+    
     };
 
     var token = tokenHandler.CreateToken(tokenDescriptor);
     #endregion
     
     string tokenString = tokenHandler.WriteToken(token);
-    ctx.Response.Cookies.Append("X-Access-Token", tokenHandler.WriteToken(token), new CookieOptions
+    ctx.Response.Cookies.Append("X-Access-Token", tokenString, new CookieOptions
     {
         HttpOnly = true,
-        SameSite = SameSiteMode.None,
-        Secure = false
+        SameSite = SameSiteMode.Strict,
+        Secure = false,
+        Path = "/"
     });
+    ctx.Response.ContentType = "text/json";
     await ctx.Response.WriteAsJsonAsync(new { Token = tokenString });
 }).AllowAnonymous();
-app.MapHub<MessageHub>("/api/v1/chat");
+app.MapHub<MessageHub>("/chat");
 app.Run();

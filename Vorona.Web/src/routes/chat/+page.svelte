@@ -58,20 +58,26 @@
     {/if}
     {#if $messageHistoryStore.length > 0}
         <div class="chatbox-messages">
-
             {#each $messageHistoryStore as message}
                 <MessageBubble content={message.content} sender={message.sender}></MessageBubble>
             {/each}
         </div>
     {:else}
         <p>No messages yet.</p>
-        
-    
     {/if}
     <div class="chatFooter">
         <input bind:value={currentMessage} type="text" placeholder="Type your message here..." on:keydown={(e) => e.key === 'Enter' && sendText()}/>
         <button on:click={sendText}>Send</button>
         
+        <!-- TODO: fix CORS error, 404 not found -->
+        <button class="getjwt" on:click={() => fetch('http://localhost:5207/api/v1/jwt', {
+            mode: 'no-cors',
+            credentials: 'include',
+        })}>GET JWT</button>
+        <button on:click={() => fetch('http://localhost:5207/api/v1/protected', {
+            mode: 'no-cors',
+            credentials: 'include'
+        })}>GET protected</button>
         <!-- DEBUG -->
         <!-- <button on:click={showHistory}>Log history</button>
         <button on:click={() => connection.invoke("FetchUsers")}>Log cache</button>
