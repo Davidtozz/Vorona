@@ -1,20 +1,12 @@
 <script lang="ts">
-    import {HubConnectionBuilder, LogLevel, HttpTransportType, HubConnection} from "@microsoft/signalr";
-    import {onMount} from "svelte";
+    import {HubConnectionBuilder, LogLevel, HttpTransportType, type HubConnection} from "@microsoft/signalr";
+    import {onDestroy, onMount} from "svelte";
     import { usernameStore, messageHistoryStore } from "$lib/stores";
     import * as Handlers from "$lib/eventHandlers";
     import UsernameModal from "$lib/components/UsernameModal.svelte";
     import MessageBubble from "$lib/components/MessageBubble.svelte";
-    import { page } from "$app/stores";
-	import { writable, type Writable } from "svelte/store";
 
-    /**
-     * The current message that is being typed.
-     */
     let currentMessage: string;
-    /**
-     * The SignalR connection.
-     */
     let connection: HubConnection;
     
     $: if($usernameStore !== "") {
@@ -50,6 +42,7 @@
     function showHistory(): void {
         console.table("History of messages: " + JSON.stringify(messageHistoryStore));
     }
+
 </script>
 
 <div class="chatbox">
