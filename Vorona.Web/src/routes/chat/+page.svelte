@@ -62,12 +62,12 @@
         <input bind:value={currentMessage} type="text" placeholder="Type your message here..." on:keydown={(e) => e.key === 'Enter' && sendText()}/>
         <button on:click={sendText}>Send</button>
         
-        <!-- TODO: fix CORS error, 404 not found -->
-        <button class="getjwt" on:click={() => fetch('http://localhost:5207/api/v1/jwt', {
+        
+        <button hidden class="getjwt" on:click={() => fetch('http://localhost:5207/api/v1/jwt', {
             mode: 'no-cors',
             credentials: 'include',
         })}>GET JWT</button>
-        <button on:click={() => fetch('http://localhost:5207/api/v1/protected', {
+        <button hidden on:click={() => fetch('http://localhost:5207/api/v1/protected', {
             mode: 'no-cors',
             credentials: 'include'
         })}>GET protected</button>
@@ -78,7 +78,7 @@
     </div>
 </div>
 
-<style>
+<style lang="scss">
     .chatbox {
         display: flex;
         justify-content: flex-end;
@@ -99,7 +99,7 @@
     }
 
     .chatbox-messages {
-        display: flex;
+        flex: 1;
         flex-direction: column;
         scroll-behavior: smooth;
         padding: 1rem;

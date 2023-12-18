@@ -10,6 +10,9 @@ public class User
     [JsonPropertyName("password")]
     public string Password { get; set; }
 
+    [JsonPropertyName("role")]
+    public string Role { get; set; } = "user";
+
     public User(string username,string password)
     {
         Username = username;

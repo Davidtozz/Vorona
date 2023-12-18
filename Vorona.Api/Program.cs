@@ -27,7 +27,6 @@ builder.Services.AddCors(options =>
     {
         policy.AllowAnyMethod()
               .AllowAnyHeader()
-              .AllowCredentials()
               .AllowAnyOrigin();
     });
 });
@@ -68,8 +67,7 @@ app.MapGet("/", () => "Hello World!");
 //? Bug: route not mapped in SwaggerUI
 app.MapPost("/api/v1/jwt", async (
     [FromBody] User user, 
-    HttpContext ctx, 
-    HttpRequest request) =>
+    HttpContext ctx) =>
 {
     if (string.IsNullOrWhiteSpace(user.Username))
     {
@@ -78,27 +76,9 @@ app.MapPost("/api/v1/jwt", async (
         await ctx.Response.WriteAsync("Username is required");
         return;
     }
-
-    #region TokenGeneration
-    var tokenHandler = new JwtSecurityTokenHandler();
-    var key = Encoding.ASCII.GetBytes(app.Configuration["Jwt:Key"]!);
-    var tokenDescriptor = new SecurityTokenDescriptor
-    {
-        Subject = new ClaimsIdentity(new Claim[]
-        {
-            new(ClaimTypes.Name, user.Username), //TODO: Replace with actual username
-            new(ClaimTypes.Role, "Admin")
-        }),
-        Expires = DateTime.UtcNow.AddMinutes(5),
-        SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature),
     
-    };
-
-    var token = tokenHandler.CreateToken(tokenDescriptor);
-    #endregion
-    
-    string tokenString = tokenHandler.WriteToken(token);
-    ctx.Response.Cookies.Append("X-Access-Token", tokenString, new CookieOptions
+    string jwtToken = GenerateJwtToken(user.Username, "User");
+    ctx.Response.Cookies.Append("X-Access-Token", jwtToken, new CookieOptions
     {
         HttpOnly = true,
         SameSite = SameSiteMode.Strict,
@@ -107,7 +87,29 @@ app.MapPost("/api/v1/jwt", async (
     });
 
     ctx.Response.ContentType = "text/json";
-    await ctx.Response.WriteAsJsonAsync(new { Token = tokenString });
+    await ctx.Response.WriteAsJsonAsync(new { Token = jwtToken });
 }).AllowAnonymous();
 app.MapHub<MessageHub>("/chat");
 app.Run();
+
+
+
+
+string GenerateJwtToken(string username, string role)
+{
+    var tokenHandler = new JwtSecurityTokenHandler();
+    var securityKey = Encoding.ASCII.GetBytes(app.Configuration["Jwt:Key"]!);
+    var tokenDescriptor = new SecurityTokenDescriptor
+    {
+        Subject = new ClaimsIdentity(new Claim[]
+        {
+            new(ClaimTypes.Name, username), //TODO: Replace with actual username
+            new(ClaimTypes.Role, role)
+        }),
+        Expires = DateTime.UtcNow.AddMinutes(5),
+        SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(securityKey), SecurityAlgorithms.HmacSha256Signature),
+    };
+
+    var token = tokenHandler.CreateToken(tokenDescriptor);
+    return tokenHandler.WriteToken(token);
+}
