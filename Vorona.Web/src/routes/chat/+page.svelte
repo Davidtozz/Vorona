@@ -27,8 +27,8 @@
         
         /* Event listeners */
         connection.on("ReceiveMessage", Handlers.onReceiveMessage);
-        connection.on("Connected", Handlers.onConnectionEstablished);
-        connection.on("GetUsers", Handlers.onGetUsers);
+        /* connection.on("Connected", Handlers.onConnectionEstablished);
+        connection.on("GetUsers", Handlers.onGetUsers); */
     }   
     /**
      * Sends the current message to the server using SignalR.
@@ -39,60 +39,78 @@
         currentMessage = "";
     }
 
-    function showHistory(): void {
-        console.table("History of messages: " + JSON.stringify(messageHistoryStore));
-    }
-
 </script>
 
-<div class="chatbox">
-    {#if $usernameStore === ""}
+<div class="chatbox-wrapper">
+    <!-- {#if $usernameStore === ""}
     <UsernameModal></UsernameModal>
-    {/if}
-    {#if $messageHistoryStore.length > 0}
-        <div class="chatbox-messages">
-            {#each $messageHistoryStore as message}
-                <MessageBubble content={message.content} sender={message.sender}></MessageBubble>
-            {/each}
+    {/if} -->
+    <div class="chatbox">
+        {#if $messageHistoryStore.length > 0}
+            <div class="chatbox-messages">
+                {#each $messageHistoryStore as message}
+                    <!-- avoid rendering own message twice -->
+                    {#if message.sender !== $usernameStore}
+                        <MessageBubble content={message.content} sender={message.sender}></MessageBubble>
+                    {/if}
+                    <MessageBubble content={message.content} sender={message.sender}></MessageBubble>
+                {/each}
+            </div>
+        {:else}
+        <div class="no-messages-wrapper">
+            <p>No messages yet.</p>
         </div>
-    {:else}
-        <p>No messages yet.</p>
-    {/if}
-    <div class="chatFooter">
-        <input bind:value={currentMessage} type="text" placeholder="Type your message here..." on:keydown={(e) => e.key === 'Enter' && sendText()}/>
-        <button on:click={sendText}>Send</button>
-        
-        
-        <button hidden class="getjwt" on:click={() => fetch('http://localhost:5207/api/v1/jwt', {
-            mode: 'no-cors',
-            credentials: 'include',
-        })}>GET JWT</button>
-        <button hidden on:click={() => fetch('http://localhost:5207/api/v1/protected', {
-            mode: 'no-cors',
-            credentials: 'include'
-        })}>GET protected</button>
-        <!-- DEBUG -->
-        <!-- <button on:click={showHistory}>Log history</button>
-        <button on:click={() => connection.invoke("FetchUsers")}>Log cache</button>
-        <button on:click={() => {$page.url.searchParams.set('username', $usernameStore); console.log($page.url.searchParams.get('username'))}}>Set query url</button> -->
+        {/if}
+        <div class="chatFooter">
+            <input bind:value={currentMessage} type="text" placeholder="Type your message here..." on:keydown={(e) => e.key === 'Enter' && sendText()}/>
+            <button on:click={sendText}>Send</button> 
+        </div>
     </div>
 </div>
-
 <style lang="scss">
-    .chatbox {
+    .chatbox-wrapper {
         display: flex;
         justify-content: flex-end;
         align-items: center;
         flex-direction: column;
         gap: 1rem;
+
         height: 100dvh;
         background-color: grey;
+        .chatbox {
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #d5d2d2;
+            border-radius: 1rem;
+            width: 50%;
+            height: 80%;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            .no-messages-wrapper {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                flex-direction: column;
+                gap: 1rem;
+                height: 100%;
+                width: 100%;
+                p {
+                    font-size: 24px;
+                    font-family: 'Roboto';
+                    border-radius: 1rem;
+                }
+            }
+        }
     }
 
     .chatFooter {
       display: flex;
       justify-content: center;
+      border-radius: .5rem;
       align-items: center;
+      align-self: stretch;
       flex-direction: row;
       align-items: center;
       background-color: #fdfdfd;
@@ -104,7 +122,7 @@
         scroll-behavior: smooth;
         padding: 1rem;
         gap: .5rem;
-        
+        align-self: stretch;
         overflow-y: scroll;
     }
 
@@ -125,12 +143,14 @@
         border: none;
         border-radius: 0.5rem;
         font-family: 'Roboto';
+        
+        &:hover {
+            outline: 2px solid black;
+            border-color: black;
+        }
     }
 
-    button:hover {
-        border: 5px solid black;
-        border-color: black;
-    }
+    
 
     p {
         display: inline-block;

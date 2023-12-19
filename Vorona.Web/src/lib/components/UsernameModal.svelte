@@ -14,8 +14,6 @@ function setUsername() {
 
 </script>
 
-
-
 <dialog open>
 
     <form method="dialog" on:submit|preventDefault={setUsername}>

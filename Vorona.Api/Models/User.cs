@@ -5,17 +5,18 @@ namespace Vorona.Api.Models;
 public class User
 {
     [JsonPropertyName("username")]
-    public string Username { get; set; }
+    public string Username { get; init; }
 
     [JsonPropertyName("password")]
-    public string Password { get; set; }
+    public string Password { get; init; }
 
     [JsonPropertyName("role")]
-    public string Role { get; set; } = "user";
+    public string Role { get; init; }
 
-    public User(string username,string password)
+    public User(string username,string password, string role = "user")
     {
         Username = username;
         Password = password;
+        Role = role;
     }
 }

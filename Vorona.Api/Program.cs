@@ -77,7 +77,7 @@ app.MapPost("/api/v1/jwt", async (
         return;
     }
     
-    string jwtToken = GenerateJwtToken(user.Username, "User");
+    string jwtToken = GenerateJwtToken(user.Username, user.Role);
     ctx.Response.Cookies.Append("X-Access-Token", jwtToken, new CookieOptions
     {
         HttpOnly = true,
@@ -103,8 +103,8 @@ string GenerateJwtToken(string username, string role)
     {
         Subject = new ClaimsIdentity(new Claim[]
         {
-            new(ClaimTypes.Name, username), //TODO: Replace with actual username
-            new(ClaimTypes.Role, role)
+            new("unique_name", username), //TODO: Replace with actual username
+            new("role", role)
         }),
         Expires = DateTime.UtcNow.AddMinutes(5),
         SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(securityKey), SecurityAlgorithms.HmacSha256Signature),

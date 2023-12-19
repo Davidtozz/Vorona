@@ -3,27 +3,37 @@
     import { goto } from "$app/navigation";
     import axios from "axios";
 
-    let username: string;
-    let password: string;
-
+    export let username: string = '';
+    export let password: string = '';
+    
 
     export function validateForm(): boolean {
+    let isValid = true;
 
-    if(username === undefined || password === undefined) return false;
-        if(username === null || password === null) return false;
-        if(username === "" || password === "") return false;
-        
-
-
-        return username.length > 0 && password.length > 0;
+    if (!username || username.trim().length === 0) {
+      isValid = false;
     }
 
+    if (!password || password.trim().length === 0) {
+      isValid = false;
+    }
 
+    return isValid;
+  }
+
+    function loginAsGuest(): void {
+        $usernameStore = "Guest" + Math.floor(Math.random() * 10000);
+        goto("/chat?username=" + $usernameStore);
+    }
 
     export async function register(): Promise<boolean> {
+        if(!validateForm()) {
+            return false;
+        }
         const response = await axios.post("http://localhost:5207/api/v1/jwt", {
             username: username,
-            password: password
+            password: password,
+            role: "test" //! DEBUG
         }, {
             headers: {
                 "Content-Type" : "application/json",
@@ -34,7 +44,7 @@
         if(response.status === 200) {
             console.log("Successfully registered!");
             $usernameStore = username;
-            //! goto("/chat");
+            goto("/chat?username=" + $usernameStore);
             return true;
         } else {
             console.log("Something went wrong!");
@@ -43,15 +53,16 @@
     }
 </script>
 
-
 <form on:submit={() => register()}>
     <span>
         <p>Register</p>
     </span>
-    <input type="text" id="username" placeholder="Username" bind:value={username}>
-    <input type="text" id="password" placeholder="Password" bind:value={password}>
+    
+    <input type="text" id="username" placeholder="Username" bind:value={username} required>
+    
+    <input type="text" id="password" placeholder="Password" bind:value={password} required>
     <button type="submit">Submit</button>
-    <a href="/chat" on:click>Login as guest</a>
+    <a href="#top" on:click|preventDefault={loginAsGuest}>Login as guest</a>
 </form>
 
 <style lang="scss">

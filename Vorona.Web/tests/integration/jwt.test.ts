@@ -1,18 +1,17 @@
 import { expect, test, chromium } from '@playwright/test';
-import { jwtDecode } from 'jwt-decode';
+import { jwtDecode, type JwtPayload } from 'jwt-decode';
 import isJWT from 'validator/lib/isJWT.js';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let jwtCookie: any;
 
-const TEST = {
-	USERNAME: 'test',
-	ROLE: 'User'
-} as const;
+type TestJwtPayload = JwtPayload & {
+	unique_name: string;
+	role: string;
+}
 
 
-
-test('jwt is set as cookie', async () => {
+test.beforeAll('get jwt', async () => {
 	const chrome = await chromium.launch({ headless: false, args:[
 		'--disable-web-security',
 		'--disable-features=IsolateOrigins,site-per-process',
@@ -22,30 +21,12 @@ test('jwt is set as cookie', async () => {
 	page.context();
 
     await page.goto('/');
-
-	//! Uncomment to log 
-	/* page.on('requestfinished', request => console.log('PAGE LOG:', request.postDataJSON(), request.url(), request.method(), request.response(), request.allHeaders()));
-	page.on('response', async response => {
-		console.log(`Response: ${response.status()} ${response.url()}`);
-		if (response.status() === 400) {
-			const body = await response.text();
-			console.log(`Response Body: ${body}`);
-		}
-	}); */
     
 	const usernameInput = page.getByRole('textbox', { name: 'Username' });
-	await usernameInput.fill(TEST.USERNAME);
+	await usernameInput.fill("test");
 	const passwordInput = page.getByRole('textbox', { name: 'Password' });
 	await passwordInput.fill('test');
     const button = page.getByRole('button', { name: 'Submit' });
-	
-	//! Uncomment to log request 
-	/* page.on('request', request => {
-        console.log(`Request: 
-		${request.method()} 
-		${request.url()} 
-		${JSON.stringify(request.postDataJSON())}`);
-    }); */	
 	
 	const responseFromApi = page.waitForResponse(response => response.url().includes('/api/v1/jwt'), { timeout: 5000 });
 
@@ -71,4 +52,10 @@ test('jwt token contains expected attributes', async () => {
 	expect(decoded).toBeTruthy();
 	expect(decoded).toHaveProperty('unique_name');
 	expect(decoded).toHaveProperty('role');
+});
+
+test('jwt token has expected credentials', async () => {
+	const decoded: TestJwtPayload = jwtDecode(jwtCookie.value);
+	expect(decoded.unique_name).toBe("test");
+	expect(decoded.role).toBe("test");
 });
