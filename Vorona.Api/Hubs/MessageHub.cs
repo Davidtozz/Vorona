@@ -32,7 +32,7 @@ public sealed class MessageHub : Hub
     {
 
         Console.WriteLine($"{DEBUG_PREFIX} Received message from {sender}: {message}");
-        await Clients.All.SendAsync("ReceiveMessage", sender, message);
+        await Clients.AllExcept(Context.ConnectionId).SendAsync("ReceiveMessage", sender, message);
     }
 
     public override async Task OnConnectedAsync()
@@ -63,21 +63,12 @@ public sealed class MessageHub : Hub
         await base.OnDisconnectedAsync(exception);
     }
 
-    //! Debug. Remove later
-    public async Task FetchUsers()
-    {
-        await Clients.Caller.SendAsync("GetUsers", _userTracker.Users);
-    }
-
-
     /// <summary>
     /// Receives a message from a user and sends it to all clients.
     /// </summary>
     /// <param name="user">The name of the user sending the message.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
     /// <param name="message">The content of the message.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
     public async Task ReceiveMessage(string user, string message) =>
-        await Clients.All.SendAsync("ReceiveMessage", _userTracker.Users[user], message);
+        await Clients.AllExcept(Context.ConnectionId).SendAsync("ReceiveMessage", _userTracker.Users[user], message);
     
 }

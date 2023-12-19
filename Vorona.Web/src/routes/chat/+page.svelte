@@ -27,8 +27,8 @@
         
         /* Event listeners */
         connection.on("ReceiveMessage", Handlers.onReceiveMessage);
-        /* connection.on("Connected", Handlers.onConnectionEstablished);
-        connection.on("GetUsers", Handlers.onGetUsers); */
+        connection.on("Connected", Handlers.onConnectionEstablished);
+        connection.on("GetUsers", Handlers.onGetUsers);
     }   
     /**
      * Sends the current message to the server using SignalR.
@@ -38,6 +38,11 @@
         connection.invoke("SendMessage", $usernameStore, currentMessage);
         currentMessage = "";
     }
+
+    onDestroy(() => {
+        if(connection) connection.stop();
+        messageHistoryStore.set([]);
+    })
 
 </script>
 
@@ -51,9 +56,10 @@
                 {#each $messageHistoryStore as message}
                     <!-- avoid rendering own message twice -->
                     {#if message.sender !== $usernameStore}
-                        <MessageBubble content={message.content} sender={message.sender}></MessageBubble>
+                        <MessageBubble content={message.content} sender={message.sender} isSentFromMe={false}></MessageBubble>
+                    {:else}
+                    <MessageBubble content={message.content} sender={$usernameStore} isSentFromMe={true}></MessageBubble>
                     {/if}
-                    <MessageBubble content={message.content} sender={message.sender}></MessageBubble>
                 {/each}
             </div>
         {:else}
