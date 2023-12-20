@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Vorona.Api.Hubs;
 using Vorona.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -7,19 +8,28 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Vorona.Api.Extensions;
-using Vorona.Api.Models;
 using Microsoft.AspNetCore.Mvc;
+using Vorona.Api.Data;
+using Microsoft.EntityFrameworkCore;
+using JsonOptions = Microsoft.AspNetCore.Http.Json.JsonOptions;
+using Vorona.Api.Entities;
+using User = Vorona.Api.Entities.User;
+
 
 const string DEBUG_PREFIX = "\x1b[31mdbug:\x1b[0m";
 
-
 //! BREAKING CHANGE: Slim builder, less boilerplate
 var builder = WebApplication.CreateSlimBuilder(args);
+
+builder.Services.AddDbContext<PostgresContext>(options => {
+    options.UseNpgsql(builder.Configuration.GetConnectionString("LocalDB"));
+});
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<UserTracker>();
+//builder.Services.AddScoped<PostgresContext>();
 builder.Services.AddHttpLogging(o => { });
 builder.Services.AddCors(options =>
 {
@@ -31,9 +41,9 @@ builder.Services.AddCors(options =>
     });
 });
 
-builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =>
+builder.Services.Configure<JsonOptions>(options =>
 {
-    options.SerializerOptions.PropertyNameCaseInsensitive = false;
+    options.SerializerOptions.PropertyNameCaseInsensitive = true;
     options.SerializerOptions.PropertyNamingPolicy = null;
     options.SerializerOptions.WriteIndented = true;
 });
@@ -62,9 +72,41 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors();
 
-app.MapGet("/", () => "Hello World!");
+app.MapPost("/register", (
+    [FromBody] User user,
+    PostgresContext db,
+    HttpContext ctx
+) =>
+{
 
-//? Bug: route not mapped in SwaggerUI
+    var passwordHash = SecretHasher.Hash(user.Password);
+    var refreshToken = Guid.NewGuid().ToString();
+    
+    user.RefreshToken = refreshToken;
+    user.Password = passwordHash;
+
+    ctx.Response.Cookies.Append("_rtkId", refreshToken, new CookieOptions
+    {
+        HttpOnly = true,
+        SameSite = SameSiteMode.Strict,
+        Secure = false,
+        Path = "/"
+    });
+
+    
+    var transaction = db.Database.BeginTransaction();
+
+    try {
+        db.Users.Add(user);
+        transaction.Commit();
+        db.SaveChanges();
+        return Results.Ok(user);
+    } catch(DbUpdateException) {
+        transaction.Rollback();
+        return Results.BadRequest();
+    }
+});
+
 app.MapPost("/api/v1/jwt", async (
     [FromBody] User user, 
     HttpContext ctx) =>
@@ -77,7 +119,7 @@ app.MapPost("/api/v1/jwt", async (
         return;
     }
     
-    string jwtToken = GenerateJwtToken(user.Username, user.Role);
+    string jwtToken = GenerateJwtToken(user.Username);
     ctx.Response.Cookies.Append("X-Access-Token", jwtToken, new CookieOptions
     {
         HttpOnly = true,
@@ -95,7 +137,7 @@ app.Run();
 
 
 
-string GenerateJwtToken(string username, string role)
+string GenerateJwtToken(string username, string role = "user")
 {
     var tokenHandler = new JwtSecurityTokenHandler();
     var securityKey = Encoding.ASCII.GetBytes(app.Configuration["Jwt:Key"]!);

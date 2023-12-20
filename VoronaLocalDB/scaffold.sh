@@ -1,0 +1,1 @@
+dotnet ef dbcontext scaffold "Server=localhost:5432;Database=postgres;Username=postgres;Password=postgres;" Npgsql.EntityFrameworkCore.PostgreSQL --context-dir Data --output-dir Entities

@@ -1,7 +1,13 @@
 import {messageHistoryStore} from "$lib/stores";
 
 export function onReceiveMessage(user: string, message: string) {
-    messageHistoryStore.update(history => [...history, {sender: user, content: message}]);
+    const timestamp = new Date();
+
+    messageHistoryStore.update(history => [...history, {
+        sender: user, 
+        content: message,
+        timestamp: `${timestamp.getHours()}:${timestamp.getMinutes()}`
+    }]);
 }
 
 export function onConnectionEstablished(generatedGuestName: string, connectedGuests: object)  {
