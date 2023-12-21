@@ -33,12 +33,12 @@
         const response = await axios.post("http://localhost:5207/api/v1/jwt", {
             username: username,
             password: password,
-            role: "test" //! DEBUG
         }, {
             headers: {
                 "Content-Type" : "application/json",
                 "Access-Control-Allow-Origin" :"*",
             },
+            withCredentials: true, //Allows token in 'Set-Cookie' header to be set
         }
         );
         if(response.status === 200) {

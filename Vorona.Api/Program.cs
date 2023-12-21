@@ -14,6 +14,7 @@ using Microsoft.EntityFrameworkCore;
 using JsonOptions = Microsoft.AspNetCore.Http.Json.JsonOptions;
 using Vorona.Api.Entities;
 using User = Vorona.Api.Entities.User;
+using Npgsql;
 
 
 const string DEBUG_PREFIX = "\x1b[31mdbug:\x1b[0m";
@@ -79,13 +80,17 @@ app.MapPost("/register", (
 ) =>
 {
 
-    var passwordHash = SecretHasher.Hash(user.Password);
-    var refreshToken = Guid.NewGuid().ToString();
-    
-    user.RefreshToken = refreshToken;
-    user.Password = passwordHash;
+    //check if the user is already registered
+    var existingUser = db.Users.FirstOrDefault(u => u.Username == user.Username);
+    if (existingUser is not null)
+    {
+        return Results.Conflict("Username already exists");
+    }
+   
+    user.RefreshToken = SecretHasher.Hash(user.Password);;
+    user.Password =  Guid.NewGuid().ToString();
 
-    ctx.Response.Cookies.Append("_rtkId", refreshToken, new CookieOptions
+    ctx.Response.Cookies.Append("_rtkId", user.RefreshToken, new CookieOptions
     {
         HttpOnly = true,
         SameSite = SameSiteMode.Strict,
@@ -124,8 +129,7 @@ app.MapPost("/api/v1/jwt", async (
     {
         HttpOnly = true,
         SameSite = SameSiteMode.Strict,
-        Secure = false,
-        Path = "/"
+        Secure = false
     });
 
     ctx.Response.ContentType = "text/json";
@@ -133,9 +137,6 @@ app.MapPost("/api/v1/jwt", async (
 }).AllowAnonymous();
 app.MapHub<MessageHub>("/chat");
 app.Run();
-
-
-
 
 string GenerateJwtToken(string username, string role = "user")
 {
@@ -148,7 +149,7 @@ string GenerateJwtToken(string username, string role = "user")
             new("unique_name", username), //TODO: Replace with actual username
             new("role", role)
         }),
-        Expires = DateTime.UtcNow.AddMinutes(5),
+        Expires = DateTime.UtcNow.AddSeconds(30),
         SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(securityKey), SecurityAlgorithms.HmacSha256Signature),
     };
 

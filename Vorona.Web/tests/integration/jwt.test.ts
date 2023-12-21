@@ -10,7 +10,6 @@ type TestJwtPayload = JwtPayload & {
 	role: string;
 }
 
-
 test.beforeAll('get jwt', async () => {
 	const chrome = await chromium.launch({ headless: false, args:[
 		'--disable-web-security',
@@ -29,9 +28,7 @@ test.beforeAll('get jwt', async () => {
     const button = page.getByRole('button', { name: 'Submit' });
 	
 	const responseFromApi = page.waitForResponse(response => response.url().includes('/api/v1/jwt'), { timeout: 5000 });
-
     await button.click();
-
 	await responseFromApi;
 
 	const cookies = await page.context().cookies();
@@ -57,5 +54,5 @@ test('jwt token contains expected attributes', async () => {
 test('jwt token has expected credentials', async () => {
 	const decoded: TestJwtPayload = jwtDecode(jwtCookie.value);
 	expect(decoded.unique_name).toBe("test");
-	expect(decoded.role).toBe("test");
+	expect(decoded.role).toBe("user"); //changed from "test" to (now) default value "user"
 });
