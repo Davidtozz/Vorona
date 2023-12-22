@@ -1,9 +1,12 @@
 using System.Collections.Concurrent;
 using System.Runtime.ConstrainedExecution;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Vorona.Api.Services;
 
 namespace Vorona.Api.Hubs;
+
 
 public sealed class MessageHub : Hub
 {
@@ -32,18 +35,29 @@ public sealed class MessageHub : Hub
     {
 
         Console.WriteLine($"{DEBUG_PREFIX} Received message from {sender}: {message}");
-        await Clients.AllExcept(Context.ConnectionId).SendAsync("ReceiveMessage", sender, message);
+        await Clients.All.SendAsync("ReceiveMessage", sender, message);
+    }
+
+    public async Task SendPrivateMessage(string fromUser, string message, string toUser)
+    {
+        string receiver = _userTracker.Users.FirstOrDefault(x => x.Value == toUser).Key;
+
+        Console.WriteLine($"{DEBUG_PREFIX} Received private message from {fromUser} to {toUser}: {message}");
+        await Clients.Clients(Context.ConnectionId, receiver).SendAsync("ReceivePrivateMessage", fromUser, message);
     }
 
     public override async Task OnConnectedAsync()
     {
         //TODO extract JWT from headers to identify user
         string connectionId = Context.ConnectionId;
-        string username = Context.GetHttpContext()?.Request.Query["username"]!;
         ConnectedClients++;
 
-        _userTracker.Users.TryAdd(connectionId, username ?? $"Guest{random.Next(0, 1000)}");
-        Console.WriteLine($"{DEBUG_PREFIX} User {username} connected. Current clients: {ConnectedClients}");
+        string connectedUser = Context.User!.Claims.FirstOrDefault(c => c.Type == "username")!.Value;
+
+        Console.WriteLine($"{DEBUG_PREFIX} Client connected: {connectedUser}");
+
+        _userTracker.Users.TryAdd(connectionId, connectedUser);
+        Console.WriteLine($"{DEBUG_PREFIX} User {connectedUser} connected. Current clients: {ConnectedClients}");
         Console.WriteLine($"{DEBUG_PREFIX} Users({_userTracker.Users.Count}): {string.Join(", ", _userTracker.Users.Select(x => $"{x.Key} => {x.Value}"))}");
 
         await Clients.Caller.SendAsync("Connected", _userTracker.Users[connectionId], _userTracker.Users);
@@ -69,6 +83,6 @@ public sealed class MessageHub : Hub
     /// <param name="user">The name of the user sending the message.</param>
     /// <param name="message">The content of the message.</param>
     public async Task ReceiveMessage(string user, string message) =>
-        await Clients.AllExcept(Context.ConnectionId).SendAsync("ReceiveMessage", _userTracker.Users[user], message);
+        await Clients.All.SendAsync("ReceiveMessage", _userTracker.Users[user], message);
     
 }

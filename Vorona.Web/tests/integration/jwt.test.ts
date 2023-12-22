@@ -6,7 +6,7 @@ import isJWT from 'validator/lib/isJWT.js';
 let jwtCookie: any;
 
 type TestJwtPayload = JwtPayload & {
-	unique_name: string;
+	username: string;
 	role: string;
 }
 
@@ -47,12 +47,12 @@ test('jwt token contains expected attributes', async () => {
 	const decoded = jwtDecode(jwtCookie.value);
 	expect(decoded).toBeDefined();
 	expect(decoded).toBeTruthy();
-	expect(decoded).toHaveProperty('unique_name');
+	expect(decoded).toHaveProperty('username');
 	expect(decoded).toHaveProperty('role');
 });
 
 test('jwt token has expected credentials', async () => {
 	const decoded: TestJwtPayload = jwtDecode(jwtCookie.value);
-	expect(decoded.unique_name).toBe("test");
+	expect(decoded.username).toBe("test");
 	expect(decoded.role).toBe("user"); //changed from "test" to (now) default value "user"
 });

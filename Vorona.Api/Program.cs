@@ -15,6 +15,7 @@ using JsonOptions = Microsoft.AspNetCore.Http.Json.JsonOptions;
 using Vorona.Api.Entities;
 using User = Vorona.Api.Entities.User;
 using Npgsql;
+using Microsoft.AspNetCore.SignalR;
 
 
 const string DEBUG_PREFIX = "\x1b[31mdbug:\x1b[0m";
@@ -29,16 +30,18 @@ builder.Services.AddDbContext<PostgresContext>(options => {
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddSignalR();
+
 builder.Services.AddSingleton<UserTracker>();
 //builder.Services.AddScoped<PostgresContext>();
 builder.Services.AddHttpLogging(o => { });
 builder.Services.AddCors(options =>
 {
-    options.AddDefaultPolicy(policy =>
+    options.AddPolicy("AllowAll", p =>
     {
-        policy.AllowAnyMethod()
-              .AllowAnyHeader()
-              .AllowAnyOrigin();
+        p.WithOrigins("http://localhost:5173")
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials();
     });
 });
 
@@ -58,7 +61,11 @@ builder.WebHost.UseKestrel(options =>
 });
 
 var app = builder.Build();
+app.UseCors(policyName: "AllowAll");
 app.UseHttpLogging();
+
+
+//app.UseMiddleware<AuthMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {
@@ -71,7 +78,7 @@ if (app.Environment.IsDevelopment())
     app.UseDeveloperExceptionPage();
 }
 
-app.UseCors();
+
 
 app.MapPost("/register", (
     [FromBody] User user,
@@ -146,7 +153,7 @@ string GenerateJwtToken(string username, string role = "user")
     {
         Subject = new ClaimsIdentity(new Claim[]
         {
-            new("unique_name", username), //TODO: Replace with actual username
+            new("username", username), 
             new("role", role)
         }),
         Expires = DateTime.UtcNow.AddSeconds(30),

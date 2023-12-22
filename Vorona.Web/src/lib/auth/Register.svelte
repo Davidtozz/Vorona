@@ -21,10 +21,10 @@
     return isValid;
   }
 
-    function loginAsGuest(): void {
+/*     function loginAsGuest(): void {
         $usernameStore = "Guest" + Math.floor(Math.random() * 10000);
         goto("/chat?username=" + $usernameStore);
-    }
+    } */
 
     export async function register(): Promise<boolean> {
         if(!validateForm()) {
@@ -35,8 +35,7 @@
             password: password,
         }, {
             headers: {
-                "Content-Type" : "application/json",
-                "Access-Control-Allow-Origin" :"*",
+                "Content-Type" : "application/json"
             },
             withCredentials: true, //Allows token in 'Set-Cookie' header to be set
         }
@@ -62,7 +61,7 @@
     
     <input type="text" id="password" placeholder="Password" bind:value={password} required>
     <button type="submit">Submit</button>
-    <a href="#top" on:click|preventDefault={loginAsGuest}>Login as guest</a>
+<!--     <a href="#top" on:click|preventDefault={loginAsGuest}>Login as guest</a> -->
 </form>
 
 <style lang="scss">

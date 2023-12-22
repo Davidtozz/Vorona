@@ -27,6 +27,7 @@
         
         /* Event listeners */
         connection.on("ReceiveMessage", Handlers.onReceiveMessage);
+        connection.on("ReceivePrivateMessage", Handlers.onReceivePrivateMessage);
         connection.on("Connected", Handlers.onConnectionEstablished);
         connection.on("GetUsers", Handlers.onGetUsers);
     }   
@@ -35,6 +36,18 @@
      */
     function sendText(): void {
         if(currentMessage === "") return;
+
+        if(currentMessage.startsWith("/whisper ")) {
+            let whisperMessage = currentMessage.split(" ");
+            console.log("Whisper message:" + whisperMessage)
+            let receiver = whisperMessage[1];
+            let message = whisperMessage.slice(2).join(" "); //TODO: fix message not being properly split
+            connection.invoke("SendPrivateMessage", $usernameStore, message, receiver);
+
+            currentMessage = "";
+            return;
+        }
+
         connection.invoke("SendMessage", $usernameStore, currentMessage);
         currentMessage = "";
     }
