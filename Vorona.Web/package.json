@@ -45,6 +45,7 @@
 		"@microsoft/signalr": "^8.0.0",
 		"axios": "^1.6.2",
 		"jwt-decode": "^4.0.0",
+		"svelte-fa": "^3.0.4",
 		"validator": "^13.11.0"
 	}
 }

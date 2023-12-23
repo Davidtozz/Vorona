@@ -7,7 +7,10 @@ using Vorona.Api.Services;
 
 namespace Vorona.Api.Hubs;
 
-
+/* [Authorize(
+    AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, 
+    Policy = "RequireValidToken", 
+    Roles = "User")] */
 public sealed class MessageHub : Hub
 {
     /// <summary>
@@ -15,7 +18,6 @@ public sealed class MessageHub : Hub
     /// This allows us to track connected users and their names.
     /// </summary>
     private readonly UserTracker _userTracker;
-    private readonly Random random = new();
     private uint ConnectedClients = 0;
     private const string DEBUG_PREFIX = "\x1b[31mdbug:\x1b[0m";
 
@@ -33,7 +35,6 @@ public sealed class MessageHub : Hub
     /// <returns></returns>
     public async Task SendMessage(string sender, string message)
     {
-
         Console.WriteLine($"{DEBUG_PREFIX} Received message from {sender}: {message}");
         await Clients.All.SendAsync("ReceiveMessage", sender, message);
     }
@@ -58,9 +59,10 @@ public sealed class MessageHub : Hub
 
         _userTracker.Users.TryAdd(connectionId, connectedUser);
         Console.WriteLine($"{DEBUG_PREFIX} User {connectedUser} connected. Current clients: {ConnectedClients}");
-        Console.WriteLine($"{DEBUG_PREFIX} Users({_userTracker.Users.Count}): {string.Join(", ", _userTracker.Users.Select(x => $"{x.Key} => {x.Value}"))}");
+        Console.WriteLine($"{DEBUG_PREFIX} Users({_userTracker.Users.Count}): {string.Join(", ", _userTracker.Users.Select(x => $"{x.Value}"))}");
 
-        await Clients.Caller.SendAsync("Connected", _userTracker.Users[connectionId], _userTracker.Users);
+        await Clients.Caller.SendAsync("ConnectionEstablished", _userTracker.Users.Values.ToArray());
+        await Clients.AllExcept(connectionId).SendAsync("UserConnected", connectedUser);
         await base.OnConnectedAsync();
     }
 

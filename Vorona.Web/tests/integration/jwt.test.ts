@@ -12,6 +12,7 @@ type TestJwtPayload = JwtPayload & {
 
 test.beforeAll('get jwt', async () => {
 	const chrome = await chromium.launch({ headless: false, args:[
+		//TODO: test breaks when web security is enabled
 		'--disable-web-security',
 		'--disable-features=IsolateOrigins,site-per-process',
 		'--allow-running-insecure-content'

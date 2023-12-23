@@ -1,4 +1,4 @@
-import {messageHistoryStore} from "$lib/stores";
+import {messageHistoryStore, connectedUsersStore} from "$lib/stores";
 
 export function onReceiveMessage(user: string, message: string) {
     const timestamp = new Date();
@@ -20,14 +20,17 @@ export function onReceivePrivateMessage(fromUser: string, message: string) {
         content: message,
         timestamp: `${timestamp.getHours()}:${timestamp.getMinutes()}`
     }]);
-
 }
 
-export function onConnectionEstablished(generatedGuestName: string, connectedGuests: object)  {
-    console.log("Connection started! Connected as: " + generatedGuestName);
-    console.table(connectedGuests)
+export function onConnectionEstablished(connectedGuests: string[])  {
+    connectedUsersStore.set(connectedGuests);
+
 }
 
 export function onGetUsers(users: object) {
     console.table(users)
+}
+
+export function onUserConnected(user: string) {
+    connectedUsersStore.update(users => [...users, user]);
 }

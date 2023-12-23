@@ -1,10 +1,12 @@
 <script lang="ts">
     import {HubConnectionBuilder, LogLevel, HttpTransportType, type HubConnection} from "@microsoft/signalr";
     import {onDestroy, onMount} from "svelte";
-    import { usernameStore, messageHistoryStore } from "$lib/stores";
+    import { usernameStore, messageHistoryStore, connectedUsersStore } from "$lib/stores";
     import * as Handlers from "$lib/eventHandlers";
     import UsernameModal from "$lib/components/UsernameModal.svelte";
     import MessageBubble from "$lib/components/MessageBubble.svelte";
+	import Search from "$components/Search.svelte";
+	import Conversation from "$components/Conversation.svelte";
 
     let currentMessage: string;
     let connection: HubConnection;
@@ -28,7 +30,10 @@
         /* Event listeners */
         connection.on("ReceiveMessage", Handlers.onReceiveMessage);
         connection.on("ReceivePrivateMessage", Handlers.onReceivePrivateMessage);
-        connection.on("Connected", Handlers.onConnectionEstablished);
+        connection.on("ConnectionEstablished", Handlers.onConnectionEstablished);
+        connection.on("UserConnected", (user: string) => {
+            connectedUsersStore.update(users => [...users, user])
+        });
         connection.on("GetUsers", Handlers.onGetUsers);
     }   
     /**
@@ -41,7 +46,7 @@
             let whisperMessage = currentMessage.split(" ");
             console.log("Whisper message:" + whisperMessage)
             let receiver = whisperMessage[1];
-            let message = whisperMessage.slice(2).join(" "); //TODO: fix message not being properly split
+            let message = whisperMessage.slice(2).join(" "); 
             connection.invoke("SendPrivateMessage", $usernameStore, message, receiver);
 
             currentMessage = "";
@@ -53,17 +58,32 @@
     }
 
     onDestroy(() => {
-        if(connection) connection.stop();
+        if(connection) {
+            connection.invoke("Disconnect", $usernameStore).then(() => connection.stop());    
+        };
         messageHistoryStore.set([]);
+        //TODO: implement one on one chat (on frontend)
+        //userConversationsStore.set([]);
     })
 
 </script>
 
 <div class="chatbox-wrapper">
-    <!-- {#if $usernameStore === ""}
-    <UsernameModal></UsernameModal>
-    {/if} -->
+    <div class="sidePanel">
+        <div class="search-wrapper"><Search /></div>
+        <div>
+            {#each $connectedUsersStore as user}
+            {#if user !== $usernameStore}
+                <Conversation name={user}  lastMessage={"Lorem ipsum dolor sit amet"}/>
+            {/if}
+            {/each}
+        </div>
+    </div>
+
     <div class="chatbox">
+        <div class="chatbox-header">
+            <p>Logged in as: {$usernameStore}</p>
+        </div>
         {#if $messageHistoryStore.length > 0}
             <div class="chatbox-messages">
                 {#each $messageHistoryStore as message}
@@ -86,31 +106,58 @@
         </div>
     </div>
 </div>
+
 <style lang="scss">
+
+    $sidePanelBackgroundColor: #605244;
+    $chatboxBackgroundColor: #d5d2d2;
+
+    @mixin center {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
     .chatbox-wrapper {
         display: flex;
-        justify-content: flex-end;
-        align-items: center;
-        flex-direction: column;
-        gap: 1rem;
-
+        flex-direction: row;
         height: 100dvh;
         background-color: grey;
-        .chatbox {
-            padding: 1rem;
+        .sidePanel {
+            flex: 3;
             display: flex;
+            
             flex-direction: column;
-            justify-content: space-between;
-            align-items: center;
-            background-color: #d5d2d2;
-            border-radius: 1rem;
-            width: 50%;
-            height: 80%;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-            .no-messages-wrapper {
+            background-color: $sidePanelBackgroundColor;
+            .search-wrapper {
+                flex: 0;
+                padding: 1rem;
                 display: flex;
                 justify-content: center;
                 align-items: center;
+                border-radius: .5rem;
+            }
+            div {
+                align-self: stretch;
+                flex: 1;
+                display: flex;
+                flex-direction: column;                
+            }
+            
+        }
+        .chatbox {
+            padding: 1rem;
+            flex: 7;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: $chatboxBackgroundColor;
+            /* border-radius: 1rem; */
+            /* width: 50%;
+            height: 80%; */
+/*             box-shadow: 0 0 10px rgba(0, 0, 0, 0.5); */
+            .no-messages-wrapper {
+                @include center;
                 flex-direction: column;
                 gap: 1rem;
                 height: 100%;
@@ -121,29 +168,29 @@
                     border-radius: 1rem;
                 }
             }
+            .chatbox-messages {
+                flex: 1;
+                flex-direction: column;
+                scroll-behavior: smooth;
+                padding: 1rem;
+                gap: .5rem;
+                align-self: stretch;
+                overflow-y: scroll;
+            }
+            .chatFooter {
+                @include center;
+                border-radius: .5rem;
+                align-self: stretch;
+                flex-direction: row;
+                align-items: center;
+                background-color: #fdfdfd;
+            }
         }
     }
 
-    .chatFooter {
-      display: flex;
-      justify-content: center;
-      border-radius: .5rem;
-      align-items: center;
-      align-self: stretch;
-      flex-direction: row;
-      align-items: center;
-      background-color: #fdfdfd;
-    }
+ 
 
-    .chatbox-messages {
-        flex: 1;
-        flex-direction: column;
-        scroll-behavior: smooth;
-        padding: 1rem;
-        gap: .5rem;
-        align-self: stretch;
-        overflow-y: scroll;
-    }
+
 
     input {
         flex: 5;

@@ -7,3 +7,10 @@ declare type Message = {
     isRead?: false; // TODO: implement read receipts
     isSent?: false; // TODO: implement message status
 } 
+
+declare type Conversation = {
+    name: string;
+    lastMessage: string;
+    isOnline?: boolean;
+    avatarUrl?: string; 
+}
