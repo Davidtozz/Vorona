@@ -1,15 +1,37 @@
 <script lang="ts">
 	import { faCircleUser } from "@fortawesome/free-solid-svg-icons";
 	import Fa from "svelte-fa";
+    import { userConversationsStore } from "$lib/stores";
 
     export let name: string;
-    export let lastMessage: string = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod.";
+    export let lastMessage: string = "";
+    export let isSelected: boolean = false;
+
+    function removeSelf(): void {
+        console.log(`Removing ${name} from conversations.`);
+        userConversationsStore.update(conversations => conversations.filter(c => c.name !== name));
+        
+        for(const c of $userConversationsStore) {
+            console.table(c);
+        }
+    }
+
+    /**
+     * ! Debugging function
+     */
+    function handleClick(): void {
+        isSelected = !isSelected;
+        console.log(`Selected ${name}:\n Value is now:${isSelected}`)        
+        /* selectConversation(name); */
+    }
 
 </script>
 
 
-<div class="contactCard">
-            
+<div class="contactCard" 
+    class:selected={isSelected}
+    on:click={handleClick} 
+    on:contextmenu|preventDefault={removeSelf} role={"button"}>
     <div class="propicWrapper">
     <!-- ? DEFAULT ICON -->
         <Fa icon={faCircleUser} class="propic" style="height: unset;"/>
@@ -33,6 +55,7 @@
     $purple: #8C52FF;
     $lightPurple: #BB98FF;
 
+    
     .contactCard {
         display: flex;
         align-items: center;
@@ -41,8 +64,15 @@
         gap:.3rem;
         height: fit-content;
         
-        /* border-radius: 5px; */
         background-color: #fff;
+        /* border-radius: 5px; */
+        
+        &:hover {
+            /* background-color: #d8d8d8; */
+            cursor: pointer;
+        }
+        
+
         text-indent: 15px;  
         .contactDetails {
         height: 100%;
@@ -89,5 +119,9 @@
         .messageInfo {
             font-family: 'Roboto', sans-serif;
         }
+    }
+
+    .selected {
+        background-color: #b62020;
     }
 </style>

@@ -1,16 +1,17 @@
 <script lang="ts">
     import {HubConnectionBuilder, LogLevel, HttpTransportType, type HubConnection} from "@microsoft/signalr";
-    import {onDestroy, onMount} from "svelte";
-    import { usernameStore, messageHistoryStore, connectedUsersStore } from "$lib/stores";
+    import {createEventDispatcher, onDestroy, onMount} from "svelte";
+    import { usernameStore,  connectedUsersStore, userConversationsStore } from "$lib/stores";
     import * as Handlers from "$lib/eventHandlers";
-    import UsernameModal from "$lib/components/UsernameModal.svelte";
     import MessageBubble from "$lib/components/MessageBubble.svelte";
 	import Search from "$components/Search.svelte";
 	import Conversation from "$components/Conversation.svelte";
+	
 
     let currentMessage: string;
     let connection: HubConnection;
-    
+    let isSelectedConversation: boolean;
+
     $: if($usernameStore !== "") {
         connection = new HubConnectionBuilder()
         .withUrl(`http://localhost:5207/chat?username=${$usernameStore}`, {
@@ -48,6 +49,21 @@
             let receiver = whisperMessage[1];
             let message = whisperMessage.slice(2).join(" "); 
             connection.invoke("SendPrivateMessage", $usernameStore, message, receiver);
+            const timestamp = new Date();
+
+            userConversationsStore.update(conversations => {
+                conversations.forEach(c => {
+                    if (c.name === receiver) {
+                        c.history.push({
+                            sender: $usernameStore,
+                            content: message,
+                            timestamp: `${timestamp.getHours()}:${timestamp.getMinutes()}`
+                        });
+                        c.lastMessage = message;
+                    }
+                });
+                return conversations;
+            });
 
             currentMessage = "";
             return;
@@ -57,13 +73,15 @@
         currentMessage = "";
     }
 
+    $: console.table($userConversationsStore);
+
     onDestroy(() => {
         if(connection) {
             connection.invoke("Disconnect", $usernameStore).then(() => connection.stop());    
         };
-        messageHistoryStore.set([]);
-        //TODO: implement one on one chat (on frontend)
-        //userConversationsStore.set([]);
+        userConversationsStore.set([]);
+        connectedUsersStore.set([]);
+        usernameStore.set("");
     })
 
 </script>
@@ -71,11 +89,15 @@
 <div class="chatbox-wrapper">
     <div class="sidePanel">
         <div class="search-wrapper"><Search /></div>
+        
         <div>
-            {#each $connectedUsersStore as user}
-            {#if user !== $usernameStore}
-                <Conversation name={user}  lastMessage={"Lorem ipsum dolor sit amet"}/>
+            {#if $userConversationsStore.length === 0}
+                <div class="no-messages-wrapper">
+                   <center><p>No conversations yet :/</p></center>
+                </div>
             {/if}
+            {#each $userConversationsStore as conversation}
+                <Conversation name={conversation.name} lastMessage={conversation.lastMessage}/>
             {/each}
         </div>
     </div>
@@ -83,23 +105,25 @@
     <div class="chatbox">
         <div class="chatbox-header">
             <p>Logged in as: {$usernameStore}</p>
-        </div>
-        {#if $messageHistoryStore.length > 0}
-            <div class="chatbox-messages">
-                {#each $messageHistoryStore as message}
-                    <!-- avoid rendering own message twice -->
-                    {#if message.sender !== $usernameStore}
-                        <MessageBubble content={message.content} sender={message.sender} isSentFromMe={false}></MessageBubble>
-                    {:else}
-                    <MessageBubble content={message.content} sender={$usernameStore} isSentFromMe={true}></MessageBubble>
+            <ul>
+                <li>You 🟢</li>
+                {#each $connectedUsersStore as user}
+                    {#if user !== $usernameStore}
+                        <li>{user} 🟢</li>
                     {/if}
                 {/each}
-            </div>
-        {:else}
-        <div class="no-messages-wrapper">
-            <p>No messages yet.</p>
+            </ul>
         </div>
-        {/if}
+        <div class="chatbox-messages">
+            {#each $userConversationsStore as conversation}
+                <!-- TODO allow selecting different chats -->
+                <!-- {#if conversation?.isSelected} -->
+                    {#each conversation.history as message}
+                        <MessageBubble content={message.content} sender={$usernameStore} isSentFromMe={$usernameStore === message.sender} />
+                    {/each}
+                <!-- {/if} -->
+            {/each}
+        </div>
         <div class="chatFooter">
             <input bind:value={currentMessage} type="text" placeholder="Type your message here..." on:keydown={(e) => e.key === 'Enter' && sendText()}/>
             <button on:click={sendText}>Send</button> 
@@ -168,6 +192,35 @@
                     border-radius: 1rem;
                 }
             }
+
+            .chatbox-header {
+                display: flex;
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+                align-self: stretch;
+                padding: 1rem;
+                gap: 1rem;
+                background-color: #fdfdfd;
+                border-radius: .5rem;
+                ul {
+                    display: flex;
+                    flex-direction: row;
+                    list-style-type: none;
+                    padding: 0;
+                    margin: 0;
+                    li {
+                        padding: 0.5rem;
+                        border: 1px solid black;
+                        border-radius: 2rem;
+                        text-align: center;
+                        &:hover {
+                            background-color: #d8d8d8;
+                            cursor: pointer;
+                        }
+                    }
+                }
+            }
             .chatbox-messages {
                 flex: 1;
                 flex-direction: column;
@@ -187,10 +240,6 @@
             }
         }
     }
-
- 
-
-
 
     input {
         flex: 5;
@@ -216,7 +265,6 @@
         }
     }
 
-    
 
     p {
         display: inline-block;

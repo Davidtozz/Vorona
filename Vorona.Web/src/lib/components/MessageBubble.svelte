@@ -5,23 +5,15 @@
     export let isSentFromMe: boolean;
 </script>
 
-{#if isSentFromMe}
-    <div class="messageBubbleWrapper reversed">
-        <div class="triangle reversed" />
-        <div class="messageBubble reversed">
-            <p class="senderName"> {sender} </p>
-            <p> {content} </p>
-        </div>
-    </div> 
-{:else}
-    <div class="messageBubbleWrapper">
-        <div class="triangle"></div>
-        <div class="messageBubble">
-            <p class="senderName"> {sender} </p>
-            <p> {content} </p>
-        </div>
-</div>
-{/if}
+
+<div class="messageBubbleWrapper" class:reversed={isSentFromMe}>
+    <div class="triangle" class:reversed={isSentFromMe} />
+    <div class="messageBubble" class:reversed={isSentFromMe}>
+        <p class="senderName"> {sender} </p>
+        <p> {content} </p>
+    </div>
+</div> 
+
 
 <style lang="scss">
     /* TODO define global font styling */

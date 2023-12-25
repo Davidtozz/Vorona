@@ -39,12 +39,12 @@ public sealed class MessageHub : Hub
         await Clients.All.SendAsync("ReceiveMessage", sender, message);
     }
 
-    public async Task SendPrivateMessage(string fromUser, string message, string toUser)
+    public async Task SendPrivateMessage(string author, string message, string recipient)
     {
-        string receiver = _userTracker.Users.FirstOrDefault(x => x.Value == toUser).Key;
+        string receiver = _userTracker.Users.FirstOrDefault(x => x.Value == recipient).Key;
 
-        Console.WriteLine($"{DEBUG_PREFIX} Received private message from {fromUser} to {toUser}: {message}");
-        await Clients.Clients(Context.ConnectionId, receiver).SendAsync("ReceivePrivateMessage", fromUser, message);
+        Console.WriteLine($"{DEBUG_PREFIX} Received private message from {author} to {recipient}: {message}");
+        await Clients.Clients(Context.ConnectionId, receiver).SendAsync("ReceivePrivateMessage", author, message, recipient);
     }
 
     public override async Task OnConnectedAsync()

@@ -1,6 +1,6 @@
 //! Experimental types for Vorona.Web
 
-declare type Message = {
+type Message = {
     sender: string;
     content: string;
     timestamp: string;
@@ -8,9 +8,12 @@ declare type Message = {
     isSent?: false; // TODO: implement message status
 } 
 
-declare type Conversation = {
+type Conversation = {
+    id?: string; // GUID
     name: string;
-    lastMessage: string;
+    isSelected?: boolean;
+    history: Message[];
+    lastMessage?: string;
     isOnline?: boolean;
     avatarUrl?: string; 
 }
