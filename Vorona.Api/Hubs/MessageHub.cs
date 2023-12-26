@@ -41,10 +41,15 @@ public sealed class MessageHub : Hub
 
     public async Task SendPrivateMessage(string author, string message, string recipient)
     {
-        string receiver = _userTracker.Users.FirstOrDefault(x => x.Value == recipient).Key;
+        string? receiver = _userTracker.Users.FirstOrDefault(x => x.Value == recipient).Key;
+
+        if(receiver == default(string)) {
+            await Clients.Caller.SendAsync("UserOffline", recipient);
+            return;
+        }
 
         Console.WriteLine($"{DEBUG_PREFIX} Received private message from {author} to {recipient}: {message}");
-        await Clients.Clients(Context.ConnectionId, receiver).SendAsync("ReceivePrivateMessage", author, message, recipient);
+        await Clients.Clients(receiver).SendAsync("ReceivePrivateMessage", author, message, recipient);
     }
 
     public override async Task OnConnectedAsync()
@@ -75,6 +80,8 @@ public sealed class MessageHub : Hub
     {
         ConnectedClients--;
         _userTracker.Users.Remove(Context.ConnectionId, out string? _);
+
+        await Clients.All.SendAsync("UserOffline", Context.User!.Claims.FirstOrDefault(c => c.Type == "username")!.Value);
         
         await base.OnDisconnectedAsync(exception);
     }

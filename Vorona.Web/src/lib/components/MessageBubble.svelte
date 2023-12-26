@@ -3,6 +3,10 @@
     //TODO: add sender to message bubble
     export let sender: string;
     export let isSentFromMe: boolean;
+    let timestamp: string = new Date().toLocaleTimeString().slice(0, -3);
+
+    
+
 </script>
 
 
@@ -11,6 +15,7 @@
     <div class="messageBubble" class:reversed={isSentFromMe}>
         <p class="senderName"> {sender} </p>
         <p> {content} </p>
+        <p class="timestamp" class:reversed={isSentFromMe}>{timestamp}</p>
     </div>
 </div> 
 
@@ -18,6 +23,8 @@
 <style lang="scss">
     /* TODO define global font styling */
     @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+
+    /* TODO update styles with new color palette */
 
     .messageBubbleWrapper {
         display: flex;
@@ -73,7 +80,7 @@
                 font-size: 0.8rem;
                 margin: 0;
             }
-
+            
             p {
                 margin: 0;
             }
@@ -81,6 +88,17 @@
             &.reversed {
                 background-color: #BB98FF;
                 color: white;
+                .timestamp {
+                    color: white;
+                }
+            }
+
+            .timestamp{
+                font-size: 0.7rem;
+                font-weight: 300;
+                color: grey;
+                margin: 0;
+                align-self: flex-end;
             }
         }
     }

@@ -1,63 +1,76 @@
-import {messageHistoryStore, connectedUsersStore, userConversationsStore} from "$lib/stores";
+import {connectedUsersStore, userConversationsStore} from "$lib/stores";
 
-export function onReceiveMessage(user: string, message: string) {
-    const timestamp = new Date();
-
-    messageHistoryStore.update(history => [...history, {
-        sender: user, 
-        content: message,
-        timestamp: `${timestamp.getHours()}:${timestamp.getMinutes()}`
-    }]);
+function onReceiveMessage(user: string, message: string) {
+    
+    userConversationsStore.update(conversations => {
+        conversations.forEach((c: Conversation) => {
+            if (c.name === "Lobby") {
+                c.history.push({
+                    sender: user,
+                    content: message,
+                    timestamp: new Date().toLocaleTimeString().slice(0, -3)
+                })
+                c.lastMessage = `${user}: ${message}`;
+            }
+        })
+        return conversations;
+    });
 }
 
-//? REMINDER: To send a message, remember to first add a conversation, manually, to the userConversationsStore
-export function onReceivePrivateMessage(author: string, message: string, recipient: string) {
-    const timestamp = new Date();    
+function onReceivePrivateMessage(author: string, message: string, recipient: string) {
+    
+    const newMessage: Message = {
+        sender: author,
+        content: message,
+        timestamp: new Date().toLocaleTimeString().slice(0, -3)
+    }
 
     console.log(`You (${recipient}) received a private message from ${author}: ${message}`)
 
-    userConversationsStore.update((conversation: Conversation[]) => {
-        /* const conversationExists = conversation.some(c => c.name === author); */
-        //TODO: implement conversationExists, if it doen't exist, create it and add it to the store
-        /* if(!conversationExists) {
-            let conversationName = author === recipient ? author : recipient;
-            conversation.push({
-                name: conversation, 
-                history: [{
-                    sender: author,
-                    content: message,
-                    timestamp: `${timestamp.getHours()}:${timestamp.getMinutes()}`
-                }],
-                lastMessage: message
-            })
-        } else */ {
-            conversation.forEach((c: Conversation) => {
-            
-            if (c.name === author) {
-                c.history.push({
-                    sender: author,
-                    content: message,
-                    timestamp: `${timestamp.getHours()}:${timestamp.getMinutes()}`
-                })
-                c.lastMessage = message;
+    userConversationsStore.update((conversations: Conversation[]) => {
+        let conversationExists: boolean = false;
+
+        conversations.forEach((conversation: Conversation) => {
+            if (conversation.name === author) {
+                conversationExists = true;
+                conversation.history.push(newMessage);
+                conversation.lastMessage = message;
             }
-          })
+        });
+
+        if (!conversationExists) {
+            conversations.push({
+                name: author,
+                history: [newMessage],
+                lastMessage: message
+            });
         }
 
-        
-        return conversation;
-    })
-};
+        return conversations;
+    });
+}
 
-export function onConnectionEstablished(connectedGuests: string[])  {
+function onConnectionEstablished(connectedGuests: string[])  {
     connectedUsersStore.set(connectedGuests);
-
 }
 
-export function onGetUsers(users: object) {
+/* function onGetUsers(users: object) {
     console.table(users)
+} */
+
+function onUserConnected(user: string) {
+    connectedUsersStore.update(users => [...users, user]);
 }
 
-export function onUserConnected(user: string) {
-    connectedUsersStore.update(users => [...users, user]);
+function onUserOffline(user: string) {
+    connectedUsersStore.update(users => users.filter(u => u !== user));
+}
+
+export {
+    onReceiveMessage,
+    onReceivePrivateMessage,
+    onConnectionEstablished,
+   /*  onGetUsers, */
+    onUserConnected,
+    onUserOffline
 }
