@@ -5,6 +5,7 @@
 	import { derived } from 'svelte/store';
 
     export let query: string;
+    let inputElement: HTMLInputElement;
 
     function addNewConversation() {
         userConversationsStore.update(conversations => [...conversations, {
@@ -24,10 +25,10 @@
 </script>
 
 <div>
-    <input placeholder="Search or start a new conversation..." bind:value={query}>
+    <input bind:this={inputElement} placeholder="Search or start a new conversation..." bind:value={query}>
     <span>
         <!-- TODO: make it prettier  -->
-        <button title="Search for a conversation">
+        <button title="Search for a conversation" on:click={() => inputElement.focus()}>
             <Fa icon={faSearch} color="white" class="icon"/>
         </button>
         
@@ -89,10 +90,6 @@
                 cursor: pointer;
                 border-radius: 50%;
                 transition: all 0.2s ease-in-out;
-    
-                &:hover {
-                     background-color: #e5e5e5;
-                }
            }
         }
 

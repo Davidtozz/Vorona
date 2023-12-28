@@ -1,6 +1,5 @@
 <script lang="ts">
     export let content: string;
-    //TODO: add sender to message bubble
     export let sender: string;
     export let isSentFromMe: boolean;
     let timestamp: string = new Date().toLocaleTimeString().slice(0, -3);
@@ -31,6 +30,7 @@
         align-items: flex-start;
         justify-content: flex-start;
         height: fit-content;
+        word-wrap: break-word;
 
         &.reversed {
             flex-direction: row-reverse;

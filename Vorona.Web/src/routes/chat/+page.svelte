@@ -3,7 +3,7 @@
     import {onDestroy} from "svelte";
     import { usernameStore,  connectedUsersStore, userConversationsStore } from "$lib/stores";
     import {onReceiveMessage, onReceivePrivateMessage, onConnectionEstablished, /* onGetUsers ,*/ onUserConnected, onUserOffline} from "$lib/eventHandlers";
-    import MessageBubble from "$lib/components/MessageBubble.svelte";
+    import Message from "$components/Message.svelte";
 	import SidePanel from "$components/SidePanel.svelte";
 	
 
@@ -12,7 +12,7 @@
 
     $: if($usernameStore !== "") {
         connection = new HubConnectionBuilder()
-        .withUrl(`http://localhost:5207/chat?username=${$usernameStore}`, {
+        .withUrl(`http://localhost:5000/chat`, {
             skipNegotiation: true,
             transport: HttpTransportType.WebSockets
         })
@@ -71,13 +71,6 @@
 
     $: console.table($userConversationsStore);
 
-/*     onDestroy(() => {
-        if(connection) {
-            connection.stop();    
-        };
-        connectedUsersStore.set([]);
-    }) */
-
 </script>
 
 <div class="chatbox-wrapper">
@@ -85,14 +78,14 @@
     <div class="chatbox">
         <div class="chatbox-messages">
             {#each $userConversationsStore as conversation}
-                <!-- TODO allow selecting different chats -->
+                
                 {#if conversation?.isSelected}
                     <center><p>You're chatting with: {conversation.name}</p></center>
                     {#each conversation.history as message}
                         {#if message.sender === $usernameStore}
-                            <MessageBubble content={message.content} sender={$usernameStore} isSentFromMe={$usernameStore === message.sender} />
+                            <Message content={message.content} sender={$usernameStore} isSentFromMe={$usernameStore === message.sender} />
                         {:else}
-                            <MessageBubble content={message.content} sender={message.sender} isSentFromMe={$usernameStore === message.sender} />
+                            <Message content={message.content} sender={message.sender} isSentFromMe={$usernameStore === message.sender} />
                         {/if}
                     {/each}
                 {/if}
@@ -185,22 +178,23 @@
                 flex-direction: row;
                 align-items: center;
                 background-color: #fdfdfd;
+                input {
+                    flex: 5;
+                    padding: 0.5rem;
+                    border: none;
+                    border-radius: 0.5rem;
+                    font-size: 24px;
+                    font-family: 'Roboto';
+                    background-color: #00a6fb;
+                    &::placeholder {
+                        color: #003554;
+                    }
+                }
             }
         }
     }
 
-    input {
-        flex: 5;
-        padding: 0.5rem;
-        border: none;
-        border-radius: 0.5rem;
-        font-size: 24px;
-        font-family: 'Roboto';
-        background-color: #00a6fb;
-        &::placeholder {
-            color: #003554;
-        }
-    }
+    
 
     button {
         flex: 1;

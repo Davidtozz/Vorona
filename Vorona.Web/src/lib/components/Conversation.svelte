@@ -72,17 +72,13 @@
     
     .contactCard {
         display: flex;
-        align-items: center;
         justify-content: space-between;
         padding: 1rem;
         gap:.3rem;
-        height: fit-content;
-        
+
         background-color: transparent;
-        /* border-radius: 5px; */
         
         &:hover {
-            /* background-color: #d8d8d8; */
             cursor: pointer;
         }
 
@@ -100,7 +96,7 @@
             display: flex;
             flex: 6;
             flex-direction: column;
-        
+
             h2 {
                 margin: 0;
                 font-family: 'Roboto', sans-serif;
@@ -115,6 +111,10 @@
                 color: rgb(30, 28, 28);
                 font-weight: 400;
                 font-style: italic;
+                text-wrap: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 40ch;
             }
         }
         .propicWrapper {

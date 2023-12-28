@@ -1,21 +1,21 @@
 <script>
-    import MessageBubble from "$components/MessageBubble.svelte";
+    import Message from "$components/Message.svelte";
 </script>
 
 <div>
     <h1>DEV ONLY</h1>
     <span>
-        <MessageBubble 
+        <Message 
             sender={"TEST"} 
             content={"Lorem ipsum dolor sit amet, consectetur adipiscing elit."} 
             isSentFromMe={true}/>
         
-        <MessageBubble 
+        <Message 
             sender={"TEST"} 
             content={"Lorem ipsum dolor sit amet, consectetur adipiscing elit."} 
             isSentFromMe={false}/>
         
-        <MessageBubble 
+        <Message 
             sender={"TEST"} 
             content={"Lorem ipsum dolor sit amet, consectetur adipiscing elit."} 
             isSentFromMe={true}/>

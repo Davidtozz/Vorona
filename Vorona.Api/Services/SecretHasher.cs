@@ -28,6 +28,12 @@ public static class SecretHasher
         );
     }
 
+    /// <summary>
+    /// Verifies the input against the provided hash string.
+    /// </summary>
+    /// <param name="input">The input string to verify.</param>
+    /// <param name="hashString">The hash string to compare against.</param>
+    /// <returns>Returns true if the input matches the hash string, false otherwise.</returns>
     public static bool Verify(string input, string hashString)
     {
         string[] segments = hashString.Split(segmentDelimiter);
