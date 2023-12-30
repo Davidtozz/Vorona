@@ -1,12 +1,14 @@
-using System.Diagnostics;
-using System.Security.Claims;
+using System.Collections;
+using System.Data.Common;
 using Carter;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using Swashbuckle.AspNetCore.Annotations;
 using Vorona.Api.Data;
 using Vorona.Api.Entities;
+using Vorona.Api.Models;
 
 namespace Vorona.Api.Endpoints;
 
@@ -20,35 +22,91 @@ public class ChatModule : CarterModule
     }
 
     public override void AddRoutes(IEndpointRouteBuilder app)
-    {   //should return the contents of the conversation, if the user is a member of the conversation
+    {   
+        app.MapPost("/new", 
+            [SwaggerOperation(Summary = "Creates a new conversation with the given name.")]
+            [SwaggerResponse(201, "The conversation was created successfully")]
+            /*[Authorize("user")]*/ async (
+            [FromBody] NewConversation newConversation, 
+            HttpContext ctx,
+            PostgresContext db) =>
+        {
+            List<User> matchingUsers = db.Users.Where(x => newConversation.Participants.Contains(x.Username)).ToList();
+
+            int[] userIds = matchingUsers.Select(x => x.Id).ToArray();
+
+            if (userIds.Length != newConversation.Participants.Length)
+            {
+                return Results.Problem(
+                    statusCode: 400,
+                    title: "Bad request",
+                    detail: "One or more of the participants do not exist"
+                    );
+            }
+            
+            var transaction = await db.Database.BeginTransactionAsync();
+            try
+            {
+                await db.Database.ExecuteSqlInterpolatedAsync($"SELECT public.create_conversation(ARRAY[{userIds}],{newConversation.ConversationName});");
+                await db.SaveChangesAsync();
+                await transaction.CommitAsync();
+                return Results.Created();
+            }
+            catch (Exception e)
+            {
+                await transaction.RollbackAsync();
+                return Results.Problem(
+                    statusCode: 500,
+                    title: "Internal server error",
+                    detail: e.Message);
+            }
+        });
+        
         app.MapGet("/{conversation_id}", 
             #region SwaggerDocs
-            [SwaggerOperation(Summary = "Returns the contents of the conversation, if the user is a member of the conversation")]
+            [SwaggerOperation(Summary = "Returns the contents of the conversation")]
             [SwaggerResponse(200, "The contents of the conversation")]
+            [SwaggerResponse(204, "The conversation is empty")]
             [SwaggerResponse(401, "The user is not a member of the conversation")]
             [SwaggerResponse(404, "The conversation does not exist")]
             [SwaggerResponse(500, "Internal server error")]
             #endregion
             [Authorize("user")]
-            ([FromRoute] int conversation_id,
+            async ([FromRoute] int conversation_id,
                 PostgresContext db,
                 HttpContext ctx
             ) =>
             {
-                //First, check if the conversation exists
-                throw new NotImplementedException();
-                    
-                Conversation? conversation = db.Conversations.FirstOrDefault(c => c.Id == conversation_id);
-                if (conversation is null)
+
+                string contextUsername = ctx.User.Claims.FirstOrDefault(c => c.Type == "username")!.Value;
+                
+                var conversationExists = await db.Conversations.AnyAsync(x => x.Id == conversation_id);
+                if (!conversationExists)
                 {
                     return Results.NotFound();
                 }
                 
-                //Check if the user is a member of the conversation
-                string? username = ctx.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Name)?.Value ?? default;
+                var query = from conversation in db.Conversations
+                            where conversation.Id == conversation_id
+                            from user in conversation.Users
+                            from message in user.Messages
+                            select new
+                            {
+                                ConversationId = conversation_id,
+                                Username = user.Username,
+                                MessageContent = message.Content,
+                                MessageId = message.Id
+                            };
                 
-                return Results.Ok(new {NoContents = "Endpoint "});
+                if (query.Any())
+                {
+                    var result = await query.ToListAsync();
 
+                    bool isMember = result.Any(x => x.Username == contextUsername);
+                    return isMember ? Results.Ok(result) : Results.Unauthorized();
+                }
+                
+                return Results.NoContent();
             });
 
         app.MapPost("/{conversation_id}/messages", 
@@ -62,7 +120,10 @@ public class ChatModule : CarterModule
 
         #endregion
 
-        ([FromRoute] Guid conversation_id) => { throw new NotImplementedException(); });
+        ([FromRoute] Guid conversation_id, [FromBody] Message messageContent) =>
+        {
+            throw new NotImplementedException();
+        });
 
         //TODO add pagination
         app.MapGet("/{conversation_id}/messages",
@@ -90,7 +151,7 @@ public class ChatModule : CarterModule
         #endregion
         ([FromRoute] Guid conversation_id) => { throw new NotImplementedException();});
         
-        app.MapGet("/{conversation_id}/{message_id}", 
+        app.MapGet("/{conversation_id}/messages/{message_id}", 
         #region SwaggerDocs
         [SwaggerOperation(Summary = "Returns the contents of a given message, in a given conversation")]
         [SwaggerResponse(200, "The contents of the message")]

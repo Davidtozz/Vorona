@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
-
 
 namespace Vorona.Api.Entities;
 
@@ -10,7 +7,11 @@ public partial class Conversation
 {
     [JsonIgnore]
     public int Id { get; set; }
-    [JsonIgnore]
+
+    public string Name { get; set; } = null!;
+
+    public string Type { get; set; } = null!;
+
     public DateTime CreatedAt { get; set; }
     [JsonIgnore]
     public DateTime UpdatedAt { get; set; }

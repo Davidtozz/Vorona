@@ -169,7 +169,7 @@ public class AuthModule : CarterModule
                 new("username", username),
                 new("role", role)
             }),
-            Expires = DateTime.UtcNow.AddSeconds(30),
+            Expires = DateTime.Now.AddMinutes(5),
             SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(securityKey), SecurityAlgorithms.HmacSha256),
         };
 
