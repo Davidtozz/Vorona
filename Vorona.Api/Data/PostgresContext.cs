@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reflection;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 using Vorona.Api.Entities;
 
 namespace Vorona.Api.Data;
@@ -15,6 +18,9 @@ public partial class PostgresContext : DbContext
         : base(options)
     {
     }
+
+    /*public int create_conversation(int[] user_ids, string conversation_name) => 
+        throw new NotSupportedException($"Function {nameof(create_conversation)} cannot be called client-side.");*/
 
     public virtual DbSet<Attachment> Attachments { get; set; }
 
@@ -31,6 +37,27 @@ public partial class PostgresContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        /*MethodInfo createConversationMethod = typeof(PostgresContext).GetMethod(nameof(create_conversation), new [] { typeof(int[]), typeof(string) });
+
+        modelBuilder.HasDbFunction(createConversationMethod, builder =>
+        {
+            builder.HasName("create_conversation");
+            builder.HasSchema("public");
+            builder.HasParameter("user_ids").HasStoreType("integer[]");
+            builder.HasParameter("conversation_name").HasStoreType("varchar");
+            builder.HasTranslation(args =>
+            {
+                return new SqlFunctionExpression(
+                    functionName: "create_conversation",
+                    arguments: args,
+                    nullable: false,
+                    type: typeof(int),
+                    argumentsPropagateNullability: new[] { false, false },
+                    typeMapping: null
+                );
+            });
+        });*/
+        
         modelBuilder
             .HasPostgresExtension("pg_catalog", "adminpack")
             .HasPostgresExtension("system_stats");
@@ -64,6 +91,14 @@ public partial class PostgresContext : DbContext
                 .HasColumnName("created_at");
             entity.Property(e => e.LastMessageId).HasColumnName("last_message_id");
             entity.Property(e => e.MessageId).HasColumnName("message_id");
+            entity.Property(e => e.Name)
+                .HasMaxLength(50)
+                .HasDefaultValueSql("'New Conversation'::character varying")
+                .HasColumnName("name");
+            entity.Property(e => e.Type)
+                .HasMaxLength(20)
+                .HasDefaultValueSql("'group'::character varying")
+                .HasColumnName("type");
             entity.Property(e => e.UpdatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .HasColumnType("timestamp without time zone")
