@@ -4,7 +4,7 @@ using Vorona.Api.Entities;
 
 namespace Vorona.Api.Models;
 
-public record NewConversation
+public class NewConversation
 {
     [JsonPropertyName("name")]
     public required string ConversationName { get; init; }

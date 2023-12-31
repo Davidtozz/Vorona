@@ -1,11 +1,10 @@
 ﻿using System;
-using System.Text.Json.Serialization;
+using System.Collections.Generic;
 
 namespace Vorona.Api.Entities;
 
 public partial class Conversation
 {
-    [JsonIgnore]
     public int Id { get; set; }
 
     public string Name { get; set; } = null!;
@@ -13,16 +12,14 @@ public partial class Conversation
     public string Type { get; set; } = null!;
 
     public DateTime CreatedAt { get; set; }
-    [JsonIgnore]
+
     public DateTime UpdatedAt { get; set; }
-    [JsonIgnore]
-    public int? MessageId { get; set; }
-    [JsonIgnore]
+
     public int? LastMessageId { get; set; }
-    [JsonIgnore]
+
     public virtual Message? LastMessage { get; set; }
-    [JsonIgnore]
-    public virtual Message? Message { get; set; }
-    [JsonIgnore]
+
+    public virtual ICollection<Message> Messages { get; set; } = new List<Message>();
+
     public virtual ICollection<User> Users { get; set; } = new List<User>();
 }

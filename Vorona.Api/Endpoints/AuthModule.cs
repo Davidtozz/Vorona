@@ -9,6 +9,7 @@ using Microsoft.IdentityModel.Tokens;
 using Swashbuckle.AspNetCore.Annotations;
 using Vorona.Api.Data;
 using Vorona.Api.Entities;
+using Vorona.Api.Models;
 
 namespace Vorona.Api.Endpoints;
 
@@ -34,8 +35,8 @@ public class AuthModule : CarterModule
         [SwaggerResponse(409, "The user is already registered")]
         [SwaggerResponse(500, "Internal server error")]
         #endregion
-        [AllowAnonymous] (
-            [FromBody] User user,
+        [AllowAnonymous] async (
+            [FromBody] Signup user,
             PostgresContext db,
             HttpContext ctx
         ) =>
@@ -47,29 +48,43 @@ public class AuthModule : CarterModule
                 return Results.Conflict("Username already exists");
             }
 
-            user.Token = new Token
+            User newUser = new()
             {
-                Id = Guid.NewGuid(),
-                UserId = user.Id,
-                ExpiresAt = DateTime.Now.AddDays(7)
-            };
-            user.Password = SecretHasher.Hash(user.Password);
+                Username = user.Username,
+                Password = SecretHasher.Hash(user.Password),
+                Email = user.Email,
 
-            ctx.Response.Cookies.Append("_rtkId", user.Token.Id.ToString(), new CookieOptions
+            };
+            
+            CookieOptions cookieOptions = new()
             {
                 HttpOnly = true,
                 SameSite = SameSiteMode.Strict,
-                Secure = false,
-                Path = "/"
-            });
+                Secure = false
+            };
+            
+            string jwtToken = GenerateJwtToken(newUser.Username);
             
             var transaction = db.Database.BeginTransaction();
 
             try
             {
-                db.Users.Add(user);
-                transaction.Commit();
-                db.SaveChanges();
+                await db.Users.AddAsync(newUser);
+                await transaction.CommitAsync();
+                await db.SaveChangesAsync();
+                
+                Token token = new Token
+                {
+                    UserId = newUser.Id,
+                    ExpiresAt = DateTime.Now.AddDays(7)
+                };
+                newUser.Token = token;
+
+                await db.Tokens.AddAsync(token);
+                await db.SaveChangesAsync();
+                await transaction.DisposeAsync();
+                ctx.Response.Cookies.Append("X-Access-Token", jwtToken, cookieOptions);
+                ctx.Response.Cookies.Append("_rtkId", newUser.Token.Id.ToString(), cookieOptions);
                 return Results.Ok(user);
             }
             catch (DbUpdateException)
@@ -79,14 +94,23 @@ public class AuthModule : CarterModule
             }
         });
         
-        app.MapPost("/login", async (
-            [FromBody] User user, 
+        app.MapPost("/login", 
+            #region SwaggerDocs
+            [SwaggerOperation(
+                Summary = "Logs in a user; returns a JWT token", 
+                Description = "Note: Working as expected!")]
+            [SwaggerResponse(200, "The user was logged in successfully")]
+            [SwaggerResponse(401, "The user is not registered")]
+            [SwaggerResponse(500, "Internal server error")]
+            #endregion
+            async (
+            [FromBody] Login user, 
             PostgresContext db,
             HttpContext ctx
             ) =>
         {
             var existingUser = db.Users.FirstOrDefault(u => u.Username == user.Username);
-            if (existingUser is null)
+            if (existingUser is default(User))
             {
                 return Results.NotFound();
             }
@@ -104,20 +128,23 @@ public class AuthModule : CarterModule
                 var transaction = await db.Database.BeginTransactionAsync();
                 try
                 {
-                    user.Token = new Token()
+                    //? Retrieve the existing token 
+                    var existingToken = await db.Tokens.FirstOrDefaultAsync(t => t.UserId == existingUser.Id);
+
+                    if (existingToken is not default(Token))
                     {
-                        Id = Guid.NewGuid(),
-                        UserId = existingUser.Id,
-                        ExpiresAt = DateTime.Now.AddDays(7)
-                    };
+                        //? Update the existing token
+                        await db.Tokens
+                            .Where(t => t.UserId == existingUser.Id)
+                            .ExecuteUpdateAsync(setter => setter.SetProperty(x => x.Id, Guid.NewGuid()));
+                    } else throw new Exception("Token was not found in the database");
                     
-                    await db.SaveChangesAsync();
                     await transaction.CommitAsync();
                 }
-                catch
+                catch (Exception e)
                 {
-                       await transaction.RollbackAsync();
-                       return Results.BadRequest("Something went wrong");
+                    await transaction.RollbackAsync();
+                    return Results.BadRequest($"Something went wrong: {e.Message}");
                 }
                 
                 return Results.Ok(new { AccessToken = jwtToken });

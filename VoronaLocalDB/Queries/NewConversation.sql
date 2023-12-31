@@ -20,8 +20,8 @@ BEGIN
     END
 $$;
 
-alter function create_conversation(integer[], varchar) owner to postgres;
+--alter function create_conversation(integer[], varchar) owner to postgres;
 
-DELETE from conversations CASCADE;
+--DELETE from conversations CASCADE;
 
-SELECT create_conversation(ARRAY[4,5], 'test');
+--SELECT create_conversation(ARRAY[4,5], 'test');

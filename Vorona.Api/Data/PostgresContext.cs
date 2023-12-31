@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Reflection;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
-using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 using Vorona.Api.Entities;
 
 namespace Vorona.Api.Data;
@@ -18,9 +15,6 @@ public partial class PostgresContext : DbContext
         : base(options)
     {
     }
-
-    /*public int create_conversation(int[] user_ids, string conversation_name) => 
-        throw new NotSupportedException($"Function {nameof(create_conversation)} cannot be called client-side.");*/
 
     public virtual DbSet<Attachment> Attachments { get; set; }
 
@@ -37,30 +31,7 @@ public partial class PostgresContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        /*MethodInfo createConversationMethod = typeof(PostgresContext).GetMethod(nameof(create_conversation), new [] { typeof(int[]), typeof(string) });
-
-        modelBuilder.HasDbFunction(createConversationMethod, builder =>
-        {
-            builder.HasName("create_conversation");
-            builder.HasSchema("public");
-            builder.HasParameter("user_ids").HasStoreType("integer[]");
-            builder.HasParameter("conversation_name").HasStoreType("varchar");
-            builder.HasTranslation(args =>
-            {
-                return new SqlFunctionExpression(
-                    functionName: "create_conversation",
-                    arguments: args,
-                    nullable: false,
-                    type: typeof(int),
-                    argumentsPropagateNullability: new[] { false, false },
-                    typeMapping: null
-                );
-            });
-        });*/
-        
-        modelBuilder
-            .HasPostgresExtension("pg_catalog", "adminpack")
-            .HasPostgresExtension("system_stats");
+        modelBuilder.HasPostgresExtension("pg_catalog", "adminpack");
 
         modelBuilder.Entity<Attachment>(entity =>
         {
@@ -68,7 +39,11 @@ public partial class PostgresContext : DbContext
 
             entity.ToTable("attachments");
 
-            entity.Property(e => e.Id).HasColumnName("id");
+            entity.HasIndex(e => e.Id, "idx_attachments_id");
+
+            entity.Property(e => e.Id)
+                .HasDefaultValueSql("gen_random_uuid()")
+                .HasColumnName("id");
             entity.Property(e => e.File).HasColumnName("file");
             entity.Property(e => e.MessageId).HasColumnName("message_id");
 
@@ -90,27 +65,22 @@ public partial class PostgresContext : DbContext
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("created_at");
             entity.Property(e => e.LastMessageId).HasColumnName("last_message_id");
-            entity.Property(e => e.MessageId).HasColumnName("message_id");
             entity.Property(e => e.Name)
                 .HasMaxLength(50)
                 .HasDefaultValueSql("'New Conversation'::character varying")
                 .HasColumnName("name");
             entity.Property(e => e.Type)
                 .HasMaxLength(20)
-                .HasDefaultValueSql("'group'::character varying")
+                .HasDefaultValueSql("'Group'::character varying")
                 .HasColumnName("type");
             entity.Property(e => e.UpdatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("updated_at");
 
-            entity.HasOne(d => d.LastMessage).WithMany(p => p.ConversationLastMessages)
+            entity.HasOne(d => d.LastMessage).WithMany(p => p.Conversations)
                 .HasForeignKey(d => d.LastMessageId)
                 .HasConstraintName("conversations_last_message_id_fkey");
-
-            entity.HasOne(d => d.Message).WithMany(p => p.ConversationMessages)
-                .HasForeignKey(d => d.MessageId)
-                .HasConstraintName("conversations_message_id_fkey");
         });
 
         modelBuilder.Entity<Message>(entity =>
@@ -119,18 +89,23 @@ public partial class PostgresContext : DbContext
 
             entity.ToTable("messages");
 
+            entity.HasIndex(e => e.ConversationId, "idx_messages_conversation_id");
+
+            entity.HasIndex(e => e.UserId, "idx_messages_user_id");
+
             entity.Property(e => e.Id).HasColumnName("id");
             entity.Property(e => e.Content).HasColumnName("content");
+            entity.Property(e => e.ConversationId).HasColumnName("conversation_id");
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("created_at");
-            entity.Property(e => e.ReplyToMessageId).HasColumnName("reply_to_message_id");
             entity.Property(e => e.UserId).HasColumnName("user_id");
 
-            entity.HasOne(d => d.ReplyToMessage).WithMany(p => p.InverseReplyToMessage)
-                .HasForeignKey(d => d.ReplyToMessageId)
-                .HasConstraintName("messages_reply_to_message_id_fkey");
+            entity.HasOne(d => d.Conversation).WithMany(p => p.Messages)
+                .HasForeignKey(d => d.ConversationId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("messages_conversation_id_fkey");
 
             entity.HasOne(d => d.User).WithMany(p => p.Messages)
                 .HasForeignKey(d => d.UserId)
@@ -147,7 +122,7 @@ public partial class PostgresContext : DbContext
             entity.HasIndex(e => e.UserId, "tokens_user_id_key").IsUnique();
 
             entity.Property(e => e.Id)
-                .ValueGeneratedNever()
+                .HasDefaultValueSql("gen_random_uuid()")
                 .HasColumnName("id");
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
@@ -216,6 +191,7 @@ public partial class PostgresContext : DbContext
                     {
                         j.HasKey("UserId", "ConversationId").HasName("user_conversations_pkey");
                         j.ToTable("user_conversations");
+                        j.HasIndex(new[] { "ConversationId" }, "idx_user_conversations_conversation_id");
                         j.HasIndex(new[] { "UserId" }, "idx_user_conversations_user_id");
                         j.IndexerProperty<int>("UserId").HasColumnName("user_id");
                         j.IndexerProperty<int>("ConversationId").HasColumnName("conversation_id");
