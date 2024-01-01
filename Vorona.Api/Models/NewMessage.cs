@@ -3,7 +3,7 @@ using Vorona.Api.Entities;
 
 namespace Vorona.Api.Models;
 
-public class NewMessage
+public class NewMessageModel
 {
     public int FromUserId { get; set; }
     public string Content { get; set; } = null!;

@@ -89,9 +89,6 @@ var app = builder.Build();
 app.UseCors(policyName: "AllowAll");
 app.UseHttpLogging();
 
-
-//app.UseMiddleware<AuthMiddleware>();
-
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
